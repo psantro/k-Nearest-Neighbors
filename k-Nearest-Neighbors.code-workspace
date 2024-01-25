@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"[c]": {
+			"editor.detectIndentation": false,
+			"editor.insertSpaces": true,
+			"editor.tabSize": 4,
+		},
+		"files.associations": {
+			"*.c": "c",
+			"*.h": "c",
+			"Makefile": "makefile"
+		}
+	}
+}
