@@ -24,10 +24,10 @@ $(OBJ)/%.o: $(SRC)/%.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 $(SRC):
-	makedir $(SRC)
+	mkdir $(SRC)
 
 $(OBJ):
-	makedir $(OBJ)
+	mkdir $(OBJ)
 
 $(BIN):
-	makedir $(BIN)
+	mkdir $(BIN)
