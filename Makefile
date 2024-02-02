@@ -1,26 +1,30 @@
 CC := gcc
 CFLAGS := -std=c17 -g
 
-SRC := src
+SRC = src
 SRCS := $(wildcard $(SRC)/*.c)
 
-OBJ := obj
+OBJ = obj
 OBJS := $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(SRCS))
 
-BIN := bin
+BIN = bin
 OUT := $(BIN)/kNN.out
 
 .PHONY: all clean
 
 all: clean $(OUT)
 
+release-build:
+
+test-build:
+
 clean:
 	$(RM) $(OBJS) $(OUT)
 
-$(OUT): $(OBJS) $(BIN)
+$(OUT): $(OBJS)
 	$(CC) $(CFLAGS) $< -o $@
 
-$(OBJ)/%.o: $(SRC)/%.c $(OBJ)
+$(OBJ)/%.o: $(SRC)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJ):
