@@ -29,5 +29,5 @@ $(SRC):
 $(OBJ):
 	mkdir $@
 
-$(OUT):
+$(BIN):
 	mkdir $@
