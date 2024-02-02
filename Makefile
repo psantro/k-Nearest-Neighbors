@@ -12,7 +12,7 @@ OUT:=$(BIN)/kNN.out
 
 .PHONY: all clean
 
-all: clean $(OUT)
+all: $(OUT)
 
 clean:
 	$(RM) $(OBJS) $(OUT)
