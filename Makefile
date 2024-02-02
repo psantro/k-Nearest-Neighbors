@@ -12,16 +12,16 @@ OUT:=$(BIN)/kNN.out
 
 .PHONY: all clean
 
-all: $(OUT)
+all: clean $(OUT)
 
 clean:
 	$(RM) $(OBJS) $(OUT)
 
 $(OUT): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) $< -o $@
 
 $(OBJ)/%.o: $(SRC)/%.c
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(SRC):
 	mkdir $@
