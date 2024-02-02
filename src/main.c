@@ -20,7 +20,7 @@ struct knn_args
  * @return Upon successful return, the number of args parsed is returned.
  * If an error is encountered, a negative value is returned.
  */
-static int init(int argc, char const **argv, struct knn_args *args)
+static int init(int argc, char **argv, struct knn_args *args)
 {
     if (argc != 5)
         return -1;
