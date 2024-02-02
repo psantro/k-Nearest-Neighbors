@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -std=c17 -g
+CFLAGS := -std=c17 -g -I inc
 
 SRC = src
 SRCS := $(wildcard $(SRC)/*.c)
