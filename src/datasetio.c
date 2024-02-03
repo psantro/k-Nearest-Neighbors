@@ -43,7 +43,9 @@ static int read_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **
     for (size_t nrow = 0; nrow < nrows; ++nrow)
         for (size_t ncolumn = 0; ncolumn < ncolumns; ++ncolumn)
         {
-            fscanf(file, "%f", &table[nrow][ncolumn]);
+            int input_items = fscanf(file, "%f", &table[nrow][ncolumn]);
+            if ((input_items == EOF) || (input_items == 1))
+                return 1;
         }
 
     *data_buffer = (float *)table;
