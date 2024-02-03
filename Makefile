@@ -22,10 +22,10 @@ clean:
 	$(RM) $(OBJS) $(OUT)
 
 $(OUT): $(OBJS)
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) $^ -o $@
 
 $(OBJ)/%.o: $(SRC)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $^ -o $@
 
 $(OBJ):
 	mkdir $@
