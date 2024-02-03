@@ -4,12 +4,12 @@
 #include "datasetio.h"
 
 /**
- * @brief Parses dataset header.
+ * @brief Scans for dataset header.
  *
  * @param[inout]    file        Dataset file.
- * @param[out]      nrows       Number of rows of the dataset.
- * @param[out]      ncolumns    Number of columns of the dataset.
- * @return On success returns zero.
+ * @param[out]      nrows       Number of rows of table.
+ * @param[out]      ncolumns    Number of columns of table.
+ * @return On failure returns zero.
  */
 static int read_dataset_header(FILE *file, size_t *nrows, size_t *ncolumns)
 {
@@ -23,13 +23,13 @@ static int read_dataset_header(FILE *file, size_t *nrows, size_t *ncolumns)
 }
 
 /**
- * @brief Parses dataset body.
+ * @brief Scans for dataset body.
  *
  * @param[inout]    file        Dataset file.
- * @param           nrows       Number of rows of the dataset.
- * @param           ncolumns    Number of colums of the dataset.
- * @param[out]      buff        Dataset buffer.
- * @return On success returns zero.
+ * @param           nrows       Number of rows of table.
+ * @param           ncolumns    Number of colums of table.
+ * @param[out]      buff        Data of table.
+ * @return On failure returns zero.
  */
 static int read_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **data)
 {
@@ -72,11 +72,28 @@ int knn_load_dataset(char const *filename, knn_dataset *dataset)
     return 1;
 }
 
+/**
+ * @brief Prints dataset header.
+ *
+ * @param[inout]    file        Dataset file.
+ * @param           nrows       Number of rows of table.
+ * @param           ncolumns    Number of columns of table.
+ * @return On failure returns zero.
+ */
 static int write_dataset_header(FILE *file, size_t nrows, size_t ncolumns)
 {
     return 0;
 }
 
+/**
+ * @brief Prints dataset body.
+ *
+ * @param[inout]    file        Dataset file.
+ * @param           nrows       Number of rows of table.
+ * @param           ncolumns    Number of columns of table.
+ * @param           data        Data of table.
+ * @return
+ */
 static int write_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float *data)
 {
     return 0;

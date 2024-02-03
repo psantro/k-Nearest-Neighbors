@@ -13,21 +13,21 @@ typedef struct knn_dataset
 } knn_dataset;
 
 /**
- * @brief Reads a knn_dataset from a dataset file given a pathname.
+ * @brief Reads a knn_dataset from a dataset file given a filename.
  *
- * @param[in]   pathname    Path to dataset file.
+ * @param[in]   filename    Path to dataset file.
  * @param[out]  dataset     Readed dataset.
- * @return On success returns zero.
+ * @return On failure returns zero.
  */
-int knn_load_dataset(char const *pathname, knn_dataset *dataset);
+int knn_load_dataset(char const *filename, knn_dataset *dataset);
 
 /**
- * @brief Appends a knn_dataset to a dataset file given a pathname.
+ * @brief Appends a knn_dataset to a dataset file given a filename.
  *
- * @param[in]   pathname    Path to dataset file.
+ * @param[in]   filename    Path to dataset file.
  * @param[in]   dataset     Dataset to append.
- * @return On success return zero.
+ * @return On failure return zero.
  */
-int knn_save_dataset(char const *pathname, knn_dataset const *dataset);
+int knn_save_dataset(char const *filename, knn_dataset const *dataset);
 
 #endif
