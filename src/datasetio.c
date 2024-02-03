@@ -40,7 +40,11 @@ static int read_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **
     if (table == NULL)
         return 1;
 
-    // TODO: Parase each data.
+    for (size_t nrow = 0; nrow < nrows; ++nrow)
+        for (size_t ncolumn = 0; ncolumn < ncolumns; ++ncolumn)
+        {
+            fscanf(file, "%f", &table[nrow][ncolumn]);
+        }
 
     *data_buffer = (float *)table;
     return 0;
