@@ -38,14 +38,14 @@ static int read_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **
 
     float(*table)[ncolumns] = calloc(nrows, sizeof *table);
     if (table == NULL)
-        return 1;
+        return 0;
 
     for (size_t nrow = 0; nrow < nrows; ++nrow)
         for (size_t ncolumn = 0; ncolumn < ncolumns; ++ncolumn)
         {
             int items_read = fscanf(file, "%f[^,\n]%*c", &table[nrow][ncolumn]);
             if ((items_read == EOF) || (items_read == 1))
-                return 1;
+                return 0;
         }
 
     *data = (float *)table;
@@ -59,17 +59,17 @@ int knn_load_dataset(char const *filename, knn_dataset *dataset)
 
     FILE *file = fopen(filename, "r");
     if (file == NULL)
-        return 1;
+        return 0;
 
     int header_ok = read_dataset_header(file, &dataset->ndays, &dataset->nhours);
     if (!header_ok)
-        return 1;
+        return 0;
 
     int body_ok = read_dataset_body(file, dataset->ndays, dataset->nhours, &dataset->data);
     if (!body_ok)
-        return 1;
+        return 0;
 
-    return 0;
+    return 1;
 }
 
 static int write_dataset_header(FILE *file, size_t nrows, size_t ncolumns)
