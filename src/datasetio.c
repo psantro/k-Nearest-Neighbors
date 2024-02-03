@@ -43,7 +43,7 @@ static int read_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **
     for (size_t nrow = 0; nrow < nrows; ++nrow)
         for (size_t ncolumn = 0; ncolumn < ncolumns; ++ncolumn)
         {
-            int input_items = fscanf(file, "%f", &table[nrow][ncolumn]);
+            int input_items = fscanf(file, "%[^,\n]f%c", &table[nrow][ncolumn]);
             if ((input_items == EOF) || (input_items == 1))
                 return 1;
         }
@@ -65,7 +65,7 @@ int knn_load_dataset(char const *pathname, knn_dataset *dataset)
     if (!header_ok)
         return 1;
 
-    int body_ok = read_dataset_body(file, dataset->ndays, dataset->nhours, &dataset->data_buff);
+    int body_ok = read_dataset_body(file, dataset->ndays, dataset->nhours, &dataset->data);
     if (!body_ok)
         return 1;
 
