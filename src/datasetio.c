@@ -90,9 +90,9 @@ static int print_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float *
     {
         for (size_t ncolumn = 0; ncolumn < (ncolumns - 1); ++ncolumns)
         {
-            fprintf(file, "%.1f,", table[nrow, ncolumn]);
+            fprintf(file, "%.1f,", table[nrow][ncolumn]);
         }
-        fprintf(file, "%.1f\n", table[nrow, ncolumns - 1]);
+        fprintf(file, "%.1f\n", table[nrow][ncolumns - 1]);
     }
 
     free(data);
