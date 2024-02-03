@@ -31,10 +31,10 @@ static int read_dataset_header(FILE *file, size_t *nrows, size_t *ncolumns)
  * @param[out]      buff        Dataset buffer.
  * @return On success returns zero.
  */
-static int read_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **data_buffer)
+static int read_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **data)
 {
     assert(file != NULL);
-    assert(data_buffer != NULL);
+    assert(data != NULL);
 
     float(*table)[ncolumns] = calloc(nrows, sizeof *table);
     if (table == NULL)
@@ -48,7 +48,7 @@ static int read_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **
                 return 1;
         }
 
-    *data_buffer = (float *)table;
+    *data = (float *)table;
     return 0;
 }
 
