@@ -10,13 +10,13 @@ OBJS := $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(SRCS))
 BIN = bin
 OUT := $(BIN)/kNN.out
 
-.PHONY: all clean
+.PHONY: all release-build test-build clean
 
 all: clean $(OUT)
 
-release-build:
-
 test-build:
+
+release-build:
 
 clean:
 	$(RM) $(OBJS) $(OUT)
