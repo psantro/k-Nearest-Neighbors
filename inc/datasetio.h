@@ -9,7 +9,7 @@
 typedef struct knn_dataset
 {
     size_t ndays, nhours;
-    float *data_buff;
+    float *data;
 } knn_dataset;
 
 /**
