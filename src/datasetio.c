@@ -17,9 +17,9 @@ static int read_dataset_header(FILE *file, size_t *nrows, size_t *ncolumns)
     assert(nrows != NULL);
     assert(ncolumns != NULL);
 
-    int input_items = fscanf(file, "%zu%zu", nrows, ncolumns);
+    int items_read = fscanf(file, "%zu%zu", nrows, ncolumns);
 
-    return (input_items != EOF) && (input_items == 2);
+    return (items_read != EOF) && (items_read == 2);
 }
 
 /**
@@ -43,13 +43,13 @@ static int read_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **
     for (size_t nrow = 0; nrow < nrows; ++nrow)
         for (size_t ncolumn = 0; ncolumn < ncolumns; ++ncolumn)
         {
-            int input_items = fscanf(file, "%[^,\n]f%c", &table[nrow][ncolumn]);
-            if ((input_items == EOF) || (input_items == 1))
+            int items_read = fscanf(file, "%f[^,\n]%*c", &table[nrow][ncolumn]);
+            if ((items_read == EOF) || (items_read == 1))
                 return 1;
         }
 
     *data = (float *)table;
-    return 0;
+    return feof(file);
 }
 
 int knn_load_dataset(char const *pathname, knn_dataset *dataset)
