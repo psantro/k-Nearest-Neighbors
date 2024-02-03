@@ -4,14 +4,14 @@
 #include "datasetio.h"
 
 /**
- * @brief Scans for dataset header.
+ * @brief Scans dataset header.
  *
- * @param[inout]    file        Dataset file.
- * @param[out]      nrows       Number of rows of table.
- * @param[out]      ncolumns    Number of columns of table.
+ * @param[inout]    file        Input dataset file.
+ * @param[out]      nrows       Number of table rows.
+ * @param[out]      ncolumns    Number of table columns.
  * @return On failure returns zero.
  */
-static int read_dataset_header(FILE *file, size_t *nrows, size_t *ncolumns)
+static int scan_dataset_header(FILE *file, size_t *nrows, size_t *ncolumns)
 {
     assert(file != NULL);
     assert(nrows != NULL);
@@ -23,15 +23,15 @@ static int read_dataset_header(FILE *file, size_t *nrows, size_t *ncolumns)
 }
 
 /**
- * @brief Scans for dataset body.
+ * @brief Scans dataset body.
  *
- * @param[inout]    file        Dataset file.
- * @param           nrows       Number of rows of table.
- * @param           ncolumns    Number of colums of table.
- * @param[out]      buff        Data of table.
+ * @param[inout]    file        Input dataset file.
+ * @param           nrows       Number of table rows.
+ * @param           ncolumns    Number of table colums.
+ * @param[out]      buff        Table data.
  * @return On failure returns zero.
  */
-static int read_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **data)
+static int scan_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **data)
 {
     assert(file != NULL);
     assert(data != NULL);
@@ -41,15 +41,62 @@ static int read_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **
         return 0;
 
     for (size_t nrow = 0; nrow < nrows; ++nrow)
-        for (size_t ncolumn = 0; ncolumn < ncolumns; ++ncolumn)
+    {
+        for (size_t ncolumn = 0; ncolumn < (ncolumns - 1); ++ncolumn)
         {
-            int items_read = fscanf(file, "%f[^,\n]%*c", &table[nrow][ncolumn]);
-            if ((items_read == EOF) || (items_read == 1))
-                return 0;
+            fscanf(file, "%f[^,]%*c", &table[nrow][ncolumn]);
         }
+        fscanf(file, "%f[^\n]%*c", &table[nrow][ncolumns - 1]);
+    }
 
     *data = (float *)table;
-    return feof(file);
+    return 0;
+}
+
+/**
+ * @brief Prints dataset header.
+ *
+ * @param[inout]    file        Output dataset file.
+ * @param           nrows       Number of table rows.
+ * @param           ncolumns    Number of table columns.
+ * @return On failure returns zero.
+ */
+static int print_dataset_header(FILE *file, size_t nrows, size_t ncolumns)
+{
+    assert(file != NULL);
+
+    fprintf(file, "%zu %zu", nrows, ncolumns);
+
+    return 0;
+}
+
+/**
+ * @brief Prints dataset body.
+ *
+ * @param[inout]    file        Output dataset file.
+ * @param           nrows       Number of table rows.
+ * @param           ncolumns    Number of table columns.
+ * @param           data        Table data.
+ * @return On failure returns zero.
+ */
+static int print_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float *data)
+{
+    assert(file != NULL);
+    assert(data != NULL);
+
+    float(*table)[ncolumns] = (float(*)[ncolumns])data;
+
+    for (size_t nrow = 0; nrow < nrows; ++nrow)
+    {
+        for (size_t ncolumn = 0; ncolumn < (ncolumns - 1); ++ncolumns)
+        {
+            fprintf(file, "%.1f,", table[nrow, ncolumn]);
+        }
+        fprintf(file, "%.1f\n", table[nrow, ncolumns - 1]);
+    }
+
+    free(data);
+    return 0;
 }
 
 int knn_load_dataset(char const *filename, knn_dataset *dataset)
@@ -61,42 +108,15 @@ int knn_load_dataset(char const *filename, knn_dataset *dataset)
     if (file == NULL)
         return 0;
 
-    int header_ok = read_dataset_header(file, &dataset->ndays, &dataset->nhours);
+    int header_ok = scan_dataset_header(file, &dataset->ndays, &dataset->nhours);
     if (!header_ok)
         return 0;
 
-    int body_ok = read_dataset_body(file, dataset->ndays, dataset->nhours, &dataset->data);
+    int body_ok = scan_dataset_body(file, dataset->ndays, dataset->nhours, &dataset->data);
     if (!body_ok)
         return 0;
 
     return 1;
-}
-
-/**
- * @brief Prints dataset header.
- *
- * @param[inout]    file        Dataset file.
- * @param           nrows       Number of rows of table.
- * @param           ncolumns    Number of columns of table.
- * @return On failure returns zero.
- */
-static int write_dataset_header(FILE *file, size_t nrows, size_t ncolumns)
-{
-    return 0;
-}
-
-/**
- * @brief Prints dataset body.
- *
- * @param[inout]    file        Dataset file.
- * @param           nrows       Number of rows of table.
- * @param           ncolumns    Number of columns of table.
- * @param           data        Data of table.
- * @return
- */
-static int write_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float *data)
-{
-    return 0;
 }
 
 int knn_save_dataset(char const *filename, knn_dataset const *dataset)
@@ -108,11 +128,11 @@ int knn_save_dataset(char const *filename, knn_dataset const *dataset)
     if (file == NULL)
         return 0;
 
-    int header_ok = write_dataset_header(file, dataset->ndays, dataset->nhours);
+    int header_ok = print_dataset_header(file, dataset->ndays, dataset->nhours);
     if (!header_ok)
         return 0;
 
-    int body_ok = write_dataset_body(file, dataset->ndays, dataset->nhours, dataset->data);
+    int body_ok = print_dataset_body(file, dataset->ndays, dataset->nhours, dataset->data);
     if (!body_ok)
         return 0;
 
