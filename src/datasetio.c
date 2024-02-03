@@ -50,7 +50,7 @@ static int scan_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **
     }
 
     *data = (float *)table;
-    return 0;
+    return 1;
 }
 
 /**
@@ -67,7 +67,7 @@ static int print_dataset_header(FILE *file, size_t nrows, size_t ncolumns)
 
     fprintf(file, "%zu %zu", nrows, ncolumns);
 
-    return 0;
+    return 1;
 }
 
 /**
@@ -96,7 +96,7 @@ static int print_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float *
     }
 
     free(data);
-    return 0;
+    return 1;
 }
 
 int knn_load_dataset(char const *filename, knn_dataset *dataset)
