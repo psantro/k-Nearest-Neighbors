@@ -52,12 +52,12 @@ static int read_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float **
     return feof(file);
 }
 
-int knn_load_dataset(char const *pathname, knn_dataset *dataset)
+int knn_load_dataset(char const *filename, knn_dataset *dataset)
 {
-    assert(pathname != NULL);
+    assert(filename != NULL);
     assert(dataset != NULL);
 
-    FILE *file = fopen(pathname, "r");
+    FILE *file = fopen(filename, "r");
     if (file == NULL)
         return 1;
 
@@ -72,7 +72,32 @@ int knn_load_dataset(char const *pathname, knn_dataset *dataset)
     return 0;
 }
 
-int knn_save_dataset(char const *pathname, knn_dataset const *dataset)
+static int write_dataset_header(FILE *file, size_t nrows, size_t ncolumns)
 {
     return 0;
+}
+
+static int write_dataset_body(FILE *file, size_t nrows, size_t ncolumns, float *data)
+{
+    return 0;
+}
+
+int knn_save_dataset(char const *filename, knn_dataset const *dataset)
+{
+    assert(filename != NULL);
+    assert(dataset != NULL);
+
+    FILE *file = fopen(filename, "r");
+    if (file == NULL)
+        return 0;
+
+    int header_ok = write_dataset_header(file, dataset->ndays, dataset->nhours);
+    if (!header_ok)
+        return 0;
+
+    int body_ok = write_dataset_body(file, dataset->ndays, dataset->nhours, dataset->data);
+    if (!body_ok)
+        return 0;
+
+    return 1;
 }
