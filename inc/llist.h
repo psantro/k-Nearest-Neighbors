@@ -9,12 +9,17 @@
 typedef struct knn_knode
 {
     size_t nk;
-    knn_knode next;
-} *knn_knode;
+    float distance;
+    struct knn_knode *next;
+} knn_knode;
 
 /**
  * @brief Linked list of neighbors.
  */
-typedef knn_knode knn_kllist;
+typedef struct knn_kllist
+{
+    knn_knode *first;
+    size_t size;
+} knn_kllist;
 
 #endif
