@@ -1,4 +1,4 @@
 typedef struct node{
-    float data[][NHOURS];
+    float data[NHOURS];
     struct Nodo* next;
 } node;
