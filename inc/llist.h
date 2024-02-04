@@ -1,14 +1,15 @@
-#ifndef KNN_DATASETIO_H
-#define KNN_DATASETIO_H
+#ifndef KNN_LLIST_H
+#define KNN_LLIST_H
+
+#include <stddef.h>
 
 /**
  * @brief Linked list
  */
-
-typedef struct node
+typedef struct knn_node
 {
-    float data[NHOURS];
-    struct Nodo *next;
-} node;
+    size_t nk;
+    knn_node next;
+} *knn_node;
 
 #endif
