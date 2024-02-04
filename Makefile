@@ -1,32 +1,35 @@
+# Compiler related
 CC := gcc
-CFLAGS := -std=c17 -g -I inc
+CFLAGS = -std=c17 -I $(INC)
 
+# Directories related
+INC := inc
 SRC := src
-SRCS := $(wildcard $(SRC)/*.c)
-
-OBJ := obj
-OBJS := $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(SRCS))
-
 BIN := bin
+DIRS := $(INC) $(SRC) $(BIN)
 
-OUT := out
+# Files related
+SRCS := $(wildcard $(SRC)/*.c)
+EXE := $(BIN)/kNN.out
 
-.PHONY: all release-build test-build clean
+all: clean test-build
 
-all: clean
+test-build: $(SRCS) | $(DIRS)
+	$(CC) $(CFLAGS) -g $^ -o $(EXE)
 
-test-build:
-
-release-build:
+release-build: $(SRCS) | $(DIRS)
+	$(CC) $(CFLAGS) -O3 -DNDEBUG $^ -o $(EXE)
 
 clean:
-	$(RM) $(OBJS)
+	$(RM) $(EXE)
 
-$(OBJ)/%.o: $(SRC)/%.c
-	$(CC) $(CFLAGS) -c $^ -o $@
+$(INC):
+	mkdir $@
 
-$(OBJ):
+$(SRC):
 	mkdir $@
 
 $(BIN):
 	mkdir $@
+
+.PHONY: all test-build release-build clean
