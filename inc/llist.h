@@ -4,12 +4,17 @@
 #include <stddef.h>
 
 /**
- * @brief Linked list
+ * @brief Linked list node of neighbor.
  */
-typedef struct knn_node
+typedef struct knn_knode
 {
     size_t nk;
-    knn_node next;
-} *knn_node;
+    knn_knode next;
+} *knn_knode;
+
+/**
+ * @brief Linked list of neighbors.
+ */
+typedef knn_knode knn_kllist;
 
 #endif
