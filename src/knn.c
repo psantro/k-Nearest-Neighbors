@@ -94,7 +94,7 @@ void knn(size_t k, knn_dataset dataset)
     }
     for (ndays = 0; ndays < NPREDICTIONS; ndays++)
     {
-        // knn_kllist neighbors =
+        knn_kllist neighbors = find_k_nearest_neighbors(dataset, ndays, k);
         float prediction[NHOURS];
         generate_prediction(k, neighbors, prediction);
         save_predcition(file, prediction);
