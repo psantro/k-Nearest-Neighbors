@@ -47,17 +47,18 @@ knn_kllist find_k_nearest_neighbors(knn_dataset dataset, size_t base, size_t k)
     return neighbors;
 }
 
-static void generate_prediction(size_t k, knn_dataset dataset, float prediction[NHOURS])
+static void generate_prediction(size_t k, knn_kllist neighbors, knn_dataset dataset, float prediction[NHOURS])
 {
     float sum = 0;
     size_t nk, nhour;
+    knn_knode node = neighbors->first;
 
     for (nhour = 0; nhour < NHOURS; nhour++)
     {
         sum = 0;
-        for (nk = 0; nk < k; nk++)
+        while (node != NULL)
         {
-            sum += dataset.data_buff[nk][nhour] / k;
+            sum += dataset->table[node->nk][nhour] / k;
         }
         prediction[nhour] = sum;
     }
@@ -93,7 +94,7 @@ void knn(size_t k, knn_dataset dataset)
     }
     for (ndays = 0; ndays < NPREDICTIONS; ndays++)
     {
-        // knn_kllist neighbors = 
+        // knn_kllist neighbors =
         float prediction[NHOURS];
         generate_prediction(k, neighbors, prediction);
         save_predcition(file, prediction);
