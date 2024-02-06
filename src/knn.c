@@ -4,7 +4,7 @@
 #include "knn.h"
 #include "llist.h"
 
-float calculate_distance(float *neighbor, float *base)
+static float calculate_distance(float *neighbor, float *base)
 {
     float total_distance = 0.0;
 
@@ -16,7 +16,7 @@ float calculate_distance(float *neighbor, float *base)
     return total_distance;
 }
 
-knn_kllist find_k_nearest_neighbors(knn_dataset dataset, size_t base, size_t k)
+static knn_kllist find_k_nearest_neighbors(knn_dataset dataset, size_t base, size_t k)
 {
     knn_kllist neighbors;
     neighbors->first = NULL;
@@ -64,6 +64,30 @@ static void generate_prediction(size_t k, knn_kllist neighbors, knn_dataset data
     }
 }
 
+static float calculate_MAPE(int h, float R[], float P[]) 
+{
+    float MAPE = 0, dif = 0, error = 0;
+
+    for(int n = 0; n < h; n++) 
+    {
+        dif = fabs(R[n] - P[n]);
+        error = (100 / h) * fabs(dif / R[n]);
+        MAPE += error;
+    }
+
+    FILE *f = fopen("../datasets/MAPE.txt", "a");
+
+    if(f == NULL) 
+    {
+        printf("ERROR");
+        return 1;
+    }
+
+    fprintf(f, "MAPE: %.2f%%\n", MAPE);
+    fclose(f);
+    return MAPE;
+}
+
 static void save_prediction(FILE *f, float prediction[NHOURS])
 {
     size_t nhours;
@@ -92,7 +116,7 @@ void knn(size_t k, knn_dataset dataset)
         float prediction[NHOURS];
         generate_prediction(k, neighbors, prediction);
         save_predcition(file, prediction);
-        // funcion de Marcos
+        calculate_MAPE(NHOURS, dataset->table[ndays + 1], prediction);
     }
     fclose(file);
 }
