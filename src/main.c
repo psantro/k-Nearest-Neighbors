@@ -1,14 +1,15 @@
+#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "datasetio.h"
 
 /**
  * @brief Sorted (easy to access) k-NN arguments.
  */
 struct knn_args
 {
-    int k;
-    char const *pathname;
-    size_t np, nt;
+    char const *filename;
+    int k, np, nt;
 };
 
 /**
@@ -17,50 +18,84 @@ struct knn_args
  * @param       argc Argument count.
  * @param[in]   argv Argument vector.
  * @param[out]  args Arguments.
- * @return Upon successful return, the number of args parsed is returned.
- * If an error is encountered, a negative value is returned.
+ * @return On failure returns zero. on success returns the number of args parsed.
  */
 static int init(int argc, char **argv, struct knn_args *args)
 {
-    if (argc != 5)
-        return -1;
+    if (argc != 4)
+    {
+        fprintf(stderr, "Error: Insufficent arguments.\n");
+        return 0;
+    }
 
     *args = (struct knn_args){
+        .filename = argv[2],
         .k = strtol(argv[1], NULL, 10),
-        .pathname = argv[2],
-        .np = strtol(argv[3], NULL, 10),
-        .nt = strtol(argv[4], NULL, 10)};
+        .nt = strtol(argv[3], NULL, 10)};
 
-    return 4;
+    return 3;
 }
 
 /**
  * @brief Executes program.
  *
- * @param[in] args Arguments.
- * @return Upon successful return, a zero or positive value is returned.
- * If an error is encountered, a negative value is returned.
+ * @param[in]   filename    Dataset filename.
+ * @param       k           Number of neighbors.
+ * @param       np          Number of processes.
+ * @param       nt          Number of threads.
+ * @return On failure returns zero.
  */
-static int exec(struct knn_args const *args)
+static int exec(char const *filename, int k, int np, int nt)
 {
-    return -1;
+    float *data;
+    int pid, ndays, load_ok;
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+
+    if (pid == 0)
+    {
+        load_ok = knn_load_dataset(filename, &ndays, &data);
+        if (!load_ok)
+        {
+            fprintf(stderr, "Error: Dataset loading error.\n");
+            return 0;
+        }
+    }
+
+    MPI_Bcast(&ndays, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
+
+    /**
+     * @todo Make loop scattering and gathering neighbors.
+     */
+
+    free(data);
+    return 1;
 }
 
 int main(int argc, char **argv)
 {
     struct knn_args args;
+    double start_time, stop_time;
 
-    if (init(argc, argv, &args) < 0)
+    MPI_Init(&argc, &argv);
+    MPI_Comm_size(MPI_COMM_WORLD, &args.np);
+
+    if (!init(argc, argv, &args))
     {
-        fprintf(stderr, "initialization error\n");
-        return EXIT_FAILURE;
+        fprintf(stderr, "Error: Initialization aborted.\n");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
-    if (exec(&args) < 0)
+    start_time = MPI_Wtime();
+    if (!exec(args.filename, args.k, args.np, args.nt))
     {
-        fprintf(stderr, "execution error\n");
-        return EXIT_FAILURE;
+        fprintf(stderr, "Error: Execution aborted.\n");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
+    stop_time = MPI_Wtime() - start_time;
 
+    MPI_Finalize();
+
+    printf("Total time %.3lfs.\n", stop_time);
     return EXIT_SUCCESS;
 }
