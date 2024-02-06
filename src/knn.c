@@ -64,21 +64,15 @@ static void generate_prediction(size_t k, knn_kllist neighbors, knn_dataset data
     }
 }
 
-static void save_predcition(FILE *f, float prediction[NHOURS])
+static void save_prediction(FILE *f, float prediction[NHOURS])
 {
     size_t nhours;
 
-    for (nhours = 0; nhours < NHOURS; nhours++)
+    for (nhours = 0; nhours < NHOURS - 1; nhours++)
     {
-        if (nhours == NHOURS - 1)
-        {
-            fprintf(f, "%f\n", prediction[nhours]);
-        }
-        else
-        {
-            fprintf(f, "%f,", prediction[nhours]);
-        }
+        fprintf(f, "%f,", prediction[nhours]);
     }
+    fprintf(f, "%f\n", prediction[nhours]);
 }
 
 void knn(size_t k, knn_dataset dataset)
