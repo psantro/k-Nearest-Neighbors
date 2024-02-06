@@ -4,10 +4,7 @@
 #include <stddef.h>
 
 #define NHOURS 24
-/**
- * @todo change to 1000
- */
-#define NPREDICTIONS 100
+#define NPREDICTIONS 1000
 
 typedef float (*dataset)[NHOURS];
 
