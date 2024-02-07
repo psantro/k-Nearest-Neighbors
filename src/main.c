@@ -64,24 +64,42 @@ static int load_dataset(int pid, char const *filename, int *ndays, float **data)
 }
 
 /**
+ * @brief Calculates chunk size for master and slaves based on total and np;
+ *
+ * @param       total               Total of data to analize.
+ * @param       np                  Number of processes.
+ * @param[out]  master_chunk_size   Master chunk size.
+ * @param[out]  slaves_chunk_size   Slaves chunk size.
+ */
+static void calculate_chunk_size(int total, int np, int *master_size, int *slaves_size)
+{
+    *master_size = total / np + total % np;
+    *slaves_size = total / np;
+}
+
+/**
  * @brief Initialize necessary chunk metadata.
  *
  * @param       pid                 Process id.
  * @param       np                  Number of processes.
- * @param       master_chunk_size   Master chunk size.
- * @param       slaves_chunk_size   Slaves chunk size.
+ * @param       chunk_ndays         Number of dataset days to chunk.
  * @param[out]  chunk_size          Current chunk size.
  * @param[out]  chunk_data          Current data.
  * @param[out]  chunk_counts        Current counts.
  * @param[out]  chunk_displs        Current displacements.
  * @return On failure returns zero.
  */
-static int initialize_chunk_metadata(int pid, int np, int master_chunk_size, int slaves_chunk_size,
-                                     int *chunk_size, float **chunk_data, int **chunk_counts, int **chunk_displs)
+static int initialize_chunk_metadata(int pid, int np, int chunk_ndays,
+                                     int *chunk_size, float **chunk_data,
+                                     int **chunk_counts, int **chunk_displs)
 {
+    int master_chunk_size, slaves_chunk_size;
+
+    calculate_chunk_size(chunk_ndays, np, &master_chunk_size, &slaves_chunk_size);
+    printf("Chunk size: %d (master), %d (slaves)\n", master_chunk_size, slaves_chunk_size);
+
     if (pid == 0)
     {
-        printf("Chunk size: %d (master), %d (slaves)\n", master_chunk_size, slaves_chunk_size);
         printf("Initializing chunk metadata...");
         *chunk_size = master_chunk_size;
         *chunk_data = malloc(NHOURS * *chunk_size * sizeof **chunk_data);
@@ -128,20 +146,6 @@ static int initialize_chunk_metadata(int pid, int np, int master_chunk_size, int
 }
 
 /**
- * @brief Calculates chunk size for master and slaves based on total and np;
- *
- * @param       total               Total of data to analize.
- * @param       np                  Number of processes.
- * @param[out]  master_chunk_size   Master chunk size.
- * @param[out]  slaves_chunk_size   Slaves chunk size.
- */
-static void calculate_chunk_size(int total, int np, int *master_size, int *slaves_size)
-{
-    *master_size = total / np + total % np;
-    *slaves_size = total / np;
-}
-
-/**
  * @brief Executes program.
  *
  * @param[in]   filename    Dataset filename.
@@ -157,7 +161,6 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     float *data, *chunk_data, target[NHOURS];
     int *chunk_counts, *chunk_displs;
     int nday, ndays, ok;
-    int master_chunk_size, slaves_chunk_size, chunk_size;
 
     if (!load_dataset(pid, filename, &ndays, &data))
         return 0;
@@ -165,9 +168,7 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     if (MPI_Bcast(&ndays, 1, MPI_INTEGER, 0, MPI_COMM_WORLD) != MPI_SUCCESS)
         return 0;
 
-    calculate_chunk_size(ndays - NPREDICTIONS, np, &master_chunk_size, &slaves_chunk_size);
-
-    if (!initialize_chunk_metadata(pid, np, master_chunk_size, slaves_chunk_size, &chunk_size, &chunk_data, &chunk_counts, &chunk_displs))
+    if (!initialize_chunk_metadata(pid, np, ndays - NPREDICTIONS, &chunk_size, &chunk_data, &chunk_counts, &chunk_displs))
         return 0;
 
     // Step 2. Scatter excluding root dataset chunks (cannot use Scatter).
