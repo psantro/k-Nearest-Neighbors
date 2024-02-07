@@ -121,9 +121,7 @@ static void calculate_chunk_size(int total, int np, int *master_size, int *slave
  * @param[out]  chunk_displs        Current displacements.
  * @return On failure returns zero.
  */
-static int initialize_chunk_metadata(int pid, int np, int chunk_ndays,
-                                     int *chunk_size, float **chunk_data,
-                                     int **chunk_counts, int **chunk_displs)
+static int initialize_chunk_metadata(int pid, int np, int chunk_ndays, int *chunk_size, float **chunk_data, int **chunk_counts, int **chunk_displs)
 {
     int master_chunk_size, slaves_chunk_size, n;
 
@@ -179,6 +177,37 @@ static int initialize_chunk_metadata(int pid, int np, int chunk_ndays,
 }
 
 /**
+ * @brief Scatter chunks forwader.
+ *
+ * @param       pid             Process id.
+ * @param[in]   data            Send data buffer.
+ * @param[in]   chunk_counts    Chunk counts.
+ * @param[in]   chunk_displs    Chunk displacements.
+ * @param[out]  chunk_data      Chunk data.
+ * @param       chunk_size      Chunk size.
+ * @return On failure returns zero.
+ */
+static int scatter_chunks(int pid, float const *data, int const *chunk_counts, int const *chunk_displs, float *chunk_data, int chunk_size)
+{
+    int scatter_ok;
+
+    if (pid == 0)
+        printf("Scattering chunks...");
+
+    scatter_ok = MPI_Scatterv(data, chunk_counts, chunk_displs, MPI_FLOAT, chunk_data, NHOURS * chunk_size, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    if (scatter_ok != MPI_SUCCESS)
+    {
+        fprintf(stderr, "failed\n%d: Error: Scattering chunks error.\n", pid);
+        return 0;
+    }
+
+    if (pid == 0)
+        printf("done\n");
+
+    return 1;
+}
+
+/**
  * @brief Executes program.
  *
  * @param[in]   filename    Dataset filename.
@@ -202,12 +231,8 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     if (!initialize_chunk_metadata(pid, np, ndays - NPREDICTIONS, &chunk_size, &chunk_data, &chunk_counts, &chunk_displs))
         return 0;
 
-    // Step 2. Scatter excluding root dataset chunks (cannot use Scatter).
-    if (pid == 0)
-        printf("Scattering chunks...");
-    MPI_Scatterv(data, chunk_counts, chunk_displs, MPI_FLOAT, chunk_data, NHOURS * chunk_size, MPI_FLOAT, 0, MPI_COMM_WORLD);
-    if (pid == 0)
-        printf("ok\n");
+    if (!scatter_chunks(pid, data, chunk_counts, chunk_displs, chunk_data, chunk_size))
+        return 0;
 
     // Step 3. Find Neighbors subgroups.
     for (nday = ndays - NPREDICTIONS; nday < ndays; ++nday)
