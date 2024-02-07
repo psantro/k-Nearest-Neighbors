@@ -51,31 +51,6 @@ static void calculate_chunk_size(int total, int np, int *master_size, int *slave
 }
 
 /**
- * @brief Calculates chunk range based on chunk size and pid.
- * Ordered by pid as ranked slaves first (1, 2, 3, ...) and master last (0).
- *
- * @param       pid         Process id.
- * @param       np          Number of processes.
- * @param       master_size Master chunk size.
- * @param       slaves_size Slaves chunk size.
- * @param[out]  start       Chunk start index.
- * @param[out]  end         Chunk end index.
- */
-static void calculate_chunk_indexes(int pid, int np, int master_size, int slaves_size, int *start, int *end)
-{
-    if (pid != 0)
-    {
-        *start = (pid - 1) * slaves_size;
-        *end = *start + slaves_size;
-    }
-    else
-    {
-        *start = (np - 1) * slaves_size;
-        *end = *start + master_size;
-    }
-}
-
-/**
  * @brief Executes program.
  *
  * @param[in]   filename    Dataset filename.
@@ -88,10 +63,10 @@ static void calculate_chunk_indexes(int pid, int np, int master_size, int slaves
 static int exec(char const *filename, int k, int np, int nt, int pid)
 {
     int npid;
-    float *data, *chunk_data;
+    float *data, *chunk_data, target[NHOURS];
     int *chunk_counts, *chunk_displs;
     int nday, ndays, ok;
-    int master_chunk_size, slaves_chunk_size, chunk_size, chunk_start, chunk_end;
+    int master_chunk_size, slaves_chunk_size, chunk_size;
 
     // Step 1.1 Master loads dataset.
     if (pid == 0)
@@ -115,7 +90,6 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
 
     // Step 1.3. All initialize chunk sizes and chunk indexes (start-end).
     calculate_chunk_size(ndays - NPREDICTIONS, np, &master_chunk_size, &slaves_chunk_size);
-    calculate_chunk_indexes(pid, np, master_chunk_size, slaves_chunk_size, &chunk_start, &chunk_end);
 
     // Step 1.4. Master initializes chunk data and chunk counts. Slaves initializes chunk data.
     if (pid == 0)
@@ -166,11 +140,13 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     printf("%d: %.1f\n", pid, chunk_data[0]);
 
     // Step 3. Find Neighbors subgroups.
-    for (nday = chunk_start; nday < chunk_end; ++nday)
+    for (nday = ndays - NPREDICTIONS; nday < ndays; ++nday)
     {
         // Step 3.1. Scatter
-        
+        MPI_Scatter(&data[ndays - NPREDICTIONS + nday], NHOURS, MPI_FLOAT, target, NHOURS, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
         // Step 3.2. kNN
+        // knn_kNN(k, target, chunk_data, chunk_size, )
 
         // Step 3.3. Gather np * k subgroups.
     }
