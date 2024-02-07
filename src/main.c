@@ -63,6 +63,19 @@ static int load_dataset(int pid, char const *filename, int *ndays, float **data)
     }
 }
 
+/**
+ * @brief Initialize necessary chunk metadata.
+ *
+ * @param       pid                 Process id.
+ * @param       np                  Number of processes.
+ * @param       master_chunk_size   Master chunk size.
+ * @param       slaves_chunk_size   Slaves chunk size.
+ * @param[out]  chunk_size          Current chunk size.
+ * @param[out]  chunk_data          Current data.
+ * @param[out]  chunk_counts        Current counts.
+ * @param[out]  chunk_displs        Current displacements.
+ * @return On failure returns zero.
+ */
 static int initialize_chunk_metadata(int pid, int np, int master_chunk_size, int slaves_chunk_size,
                                      int *chunk_size, float **chunk_data, int **chunk_counts, int **chunk_displs)
 {
@@ -86,7 +99,7 @@ static int initialize_chunk_metadata(int pid, int np, int master_chunk_size, int
         }
 
         *chunk_displs = malloc(np * sizeof **chunk_displs);
-        if (*chunk_data == NULL)
+        if (*chunk_displs == NULL)
         {
             fprintf(stderr, "failed\n%d: Error: Chunk displs error.\n", pid);
             return 0;
@@ -94,7 +107,7 @@ static int initialize_chunk_metadata(int pid, int np, int master_chunk_size, int
 
         (*chunk_counts)[0] = NHOURS * master_chunk_size;
         for (int n = 1; n < np; ++n)
-            (*chunk_counts[n]) = NHOURS * slaves_chunk_size;
+            (*chunk_counts)[n] = NHOURS * slaves_chunk_size;
 
         (*chunk_displs)[0] = 0;
         for (int n = 1; n < np; ++n)
@@ -149,11 +162,13 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     if (!load_dataset(pid, filename, &ndays, &data))
         return 0;
 
-    MPI_Bcast(&ndays, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
+    if (MPI_Bcast(&ndays, 1, MPI_INTEGER, 0, MPI_COMM_WORLD) != MPI_SUCCESS)
+        return 0;
 
     calculate_chunk_size(ndays - NPREDICTIONS, np, &master_chunk_size, &slaves_chunk_size);
 
-    // Step 1.4. Master initializes chunk data and chunk counts. Slaves initializes chunk data.
+    if (!initialize_chunk_metadata(pid, np, master_chunk_size, slaves_chunk_size, &chunk_size, &chunk_data, &chunk_counts, &chunk_displs))
+        return 0;
 
     // Step 2. Scatter excluding root dataset chunks (cannot use Scatter).
     if (pid == 0)
@@ -211,7 +226,7 @@ int main(int argc, char **argv)
     }
 
     if (pid == 0)
-        printf("Total time %.3lfs.\n", MPI_Wtime() - time);
+        printf("Total execution time: %.3lfs\n", MPI_Wtime() - time);
 
     MPI_Finalize();
 
