@@ -1,4 +1,5 @@
 #include <mpi.h>
+#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "datasetio.h"
@@ -159,6 +160,7 @@ int main(int argc, char **argv)
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
+    omp_set_num_threads(args.nt);
     if (!exec(args.filename, args.k, args.np, args.nt, pid))
     {
         fprintf(stderr, "Error: Execution aborted.\n");
