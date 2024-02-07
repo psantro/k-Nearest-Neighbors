@@ -214,6 +214,7 @@ int main(int argc, char **argv)
 
     if (pid == 0)
         printf("Total time %.3lfs.\n", MPI_Wtime() - time);
+
     MPI_Finalize();
 
     return EXIT_SUCCESS;
