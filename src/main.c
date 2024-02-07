@@ -45,10 +45,10 @@ static int init(int argc, char **argv, struct knn_args *args)
  * @param[out]  data        Data forwader.
  * @return On failure returns zero.
  */
-static int load_dataset(int pid, char const *filename, int *ndays, float *data)
+static int load_dataset(int pid, char const *filename, int *ndays, float **data)
 {
     if (pid == 0)
-        if (!knn_load_dataset(filename, &ndays, &data))
+        if (!knn_load_dataset(filename, ndays, data))
             return 0;
         else
             data = NULL;
@@ -87,10 +87,10 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     int master_chunk_size, slaves_chunk_size, chunk_size;
 
     printf("Loading dataset...");
-    ok = load_dataset(pid, filename, &ndays, data);
+    ok = load_dataset(pid, filename, &ndays, &data);
     if (!ok)
     {
-        putchar('\n'), fprintf(stderr, "%d: Error: Dataset loading error.\n", pid);
+        fprintf(stderr, "%d: Error: Dataset loading error.\n", pid);
         return 0;
     }
     printf("ok\n");
