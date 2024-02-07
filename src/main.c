@@ -37,6 +37,24 @@ static int init(int argc, char **argv, struct knn_args *args)
 }
 
 /**
+ * @brief Load dataset method forwader for @p knn_load_dataset .
+ *
+ * @param       pid         Process id.
+ * @param[in]   filename    Filename forwader.
+ * @param[out]  ndays       Ndays forwader.
+ * @param[out]  data        Data forwader.
+ * @return On failure returns zero.
+ */
+static int load_dataset(int pid, char const *filename, int *ndays, float *data)
+{
+    if (pid == 0)
+        if (!knn_load_dataset(filename, &ndays, &data))
+            return 0;
+        else
+            data = NULL;
+}
+
+/**
  * @brief Calculates chunk size for master and slaves based on total and np;
  *
  * @param       total               Total of data to analize.
@@ -68,32 +86,23 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     int nday, ndays, ok;
     int master_chunk_size, slaves_chunk_size, chunk_size;
 
-    // Step 1.1 Master loads dataset.
-    if (pid == 0)
+    printf("Loading dataset...");
+    ok = load_dataset(pid, filename, &ndays, data);
+    if (!ok)
     {
-        // Master initializes ndays and data buffer.
-        ok = knn_load_dataset(filename, &ndays, &data);
-        if (!ok)
-        {
-            fprintf(stderr, "%d: Error: Dataset loading error.\n", pid);
-            return 0;
-        }
+        putchar('\n'), fprintf(stderr, "%d: Error: Dataset loading error.\n", pid);
+        return 0;
     }
-    else
-    {
-        // Slaves initializes data to NULL.
-        data = NULL;
-    }
+    printf("ok\n");
 
-    // Step 1.2. Slaves initializes ndays.
     MPI_Bcast(&ndays, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
 
-    // Step 1.3. All initialize chunk sizes and chunk indexes (start-end).
     calculate_chunk_size(ndays - NPREDICTIONS, np, &master_chunk_size, &slaves_chunk_size);
 
     // Step 1.4. Master initializes chunk data and chunk counts. Slaves initializes chunk data.
     if (pid == 0)
     {
+        printf("Chunk size: %d (master), %d (slaves)\n", master_chunk_size, slaves_chunk_size);
         chunk_size = master_chunk_size;
         chunk_data = malloc(NHOURS * chunk_size * sizeof *chunk_data);
         if (chunk_data == NULL)
@@ -136,8 +145,11 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     }
 
     // Step 2. Scatter excluding root dataset chunks (cannot use Scatter).
+    if (pid == 0)
+        printf("Scattering chunks...");
     MPI_Scatterv(data, chunk_counts, chunk_displs, MPI_FLOAT, chunk_data, NHOURS * chunk_size, MPI_FLOAT, 0, MPI_COMM_WORLD);
-    printf("%d: %.1f\n", pid, chunk_data[0]);
+    if (pid == 0)
+        printf("ok\n");
 
     // Step 3. Find Neighbors subgroups.
     for (nday = ndays - NPREDICTIONS; nday < ndays; ++nday)
