@@ -274,6 +274,9 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     MPI_Type_commit(&mpi_neighbor_type);
 
     // Step 3. Find Neighbors subgroups.
+    knn_neighbor *kn = malloc(k * sizeof *kn);
+
+    knn_neighbor *all_kn = malloc(np * k * sizeof *np);
 
     for (nday = ndays - NPREDICTIONS; nday < ndays; ++nday)
     {
@@ -281,13 +284,17 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
         MPI_Scatter(&data[ndays - NPREDICTIONS + nday], NHOURS, MPI_FLOAT, target, NHOURS, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
         // Step 3.2. kNN
-        // knn_kNN(k, target, chunk_data, chunk_size, &neighbors[nday]);
+        knn_kNN(k, target, chunk_data, chunk_size, kn);
 
         // Step 3.3. Gather np * k subgroups.
-        // MPI_Gather();
+        MPI_Gather();
     }
 
+    free(kn);
+
     MPI_Type_free(&mpi_neighbor_type);
+
+    // Cleanup
     cleanup(pid, chunk_data, chunk_counts, chunk_displs, data);
     return 1;
 }
