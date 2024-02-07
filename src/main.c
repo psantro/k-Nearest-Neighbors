@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include "datasetio.h"
 
+#define DONE_MSG "\e[1;34mdone\e[22;39m\n"
+#define FAILED_MSG "\e[1;31mfailed\e[22;39m\n"
+#define ERROR_MSG "\e[1;31mError\e[22;39m: "
+
 /**
  * @brief Sorted (easy to access) k-NN arguments.
  */
@@ -25,7 +29,7 @@ static int init(int argc, char **argv, struct knn_args *args)
 {
     if (argc != 4)
     {
-        fprintf(stderr, "Error: Insufficent arguments.\n");
+        fprintf(stderr, ERROR_MSG "Insufficent arguments.\n");
         return 0;
     }
 
@@ -55,10 +59,10 @@ static int load_dataset(int pid, char const *filename, int *ndays, float **data)
         load_ok = knn_load_dataset(filename, ndays, data);
         if (!load_ok)
         {
-            fprintf(stderr, "failed\n%d: Error: Dataset loading error.\n", pid);
+            fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Dataset loading error.\n", pid);
             return 0;
         }
-        printf("done\n");
+        printf(DONE_MSG);
     }
     else
     {
@@ -85,12 +89,12 @@ static int broadcast_ndays(int pid, int *ndays)
     bcast_ok = MPI_Bcast(ndays, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
     if (bcast_ok != MPI_SUCCESS)
     {
-        fprintf(stderr, "failed\n%d: Error: Broadcast ndays error.\n", pid);
+        fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Broadcast ndays error.\n", pid);
         return 0;
     }
 
     if (pid == 0)
-        printf("done\n");
+        printf(DONE_MSG);
 
     return 1;
 }
@@ -133,21 +137,21 @@ static int initialize_chunk_metadata(int pid, int np, int chunk_ndays, int *chun
         *chunk_data = malloc(NHOURS * *chunk_size * sizeof **chunk_data);
         if (*chunk_data == NULL)
         {
-            fprintf(stderr, "failed\n%d: Error: Chunk data error.\n", pid);
+            fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Chunk data error.\n", pid);
             return 0;
         }
 
         *chunk_counts = malloc(np * sizeof **chunk_counts);
         if (*chunk_counts == NULL)
         {
-            fprintf(stderr, "failed\n%d, Error: Chunk counts error.\n", pid);
+            fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Chunk counts error.\n", pid);
             return 0;
         }
 
         *chunk_displs = malloc(np * sizeof **chunk_displs);
         if (*chunk_displs == NULL)
         {
-            fprintf(stderr, "failed\n%d: Error: Chunk displs error.\n", pid);
+            fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Chunk displs error.\n", pid);
             return 0;
         }
 
@@ -159,8 +163,8 @@ static int initialize_chunk_metadata(int pid, int np, int chunk_ndays, int *chun
         for (n = 1; n < np; ++n)
             (*chunk_displs)[n] = (*chunk_displs)[n - 1] + (*chunk_counts)[n - 1];
 
-        printf("done\n");
-        printf("Chunk size: %d (master), %d (slaves)\n", master_chunk_size, slaves_chunk_size);
+        printf(DONE_MSG);
+        printf("Chunk size: \e[1m%d\e[22m (master), \e[1m%d\e[22m (slaves)\n", master_chunk_size, slaves_chunk_size);
     }
     else
     {
@@ -168,7 +172,7 @@ static int initialize_chunk_metadata(int pid, int np, int chunk_ndays, int *chun
         *chunk_data = malloc(NHOURS * *chunk_size * sizeof **chunk_data);
         if (*chunk_data == NULL)
         {
-            fprintf(stderr, "\n%d: Error: Chunk data error.\n", pid);
+            fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Chunk data error.\n", pid);
             return 0;
         }
     }
@@ -197,12 +201,12 @@ static int scatter_chunks(int pid, float const *data, int const *chunk_counts, i
     scatter_ok = MPI_Scatterv(data, chunk_counts, chunk_displs, MPI_FLOAT, chunk_data, NHOURS * chunk_size, MPI_FLOAT, 0, MPI_COMM_WORLD);
     if (scatter_ok != MPI_SUCCESS)
     {
-        fprintf(stderr, "failed\n%d: Error: Scattering chunks error.\n", pid);
+        fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Scattering chunks error.\n", pid);
         return 0;
     }
 
     if (pid == 0)
-        printf("done\n");
+        printf(DONE_MSG);
 
     return 1;
 }
@@ -285,19 +289,19 @@ int main(int argc, char **argv)
 
     if (!init(argc, argv, &args))
     {
-        fprintf(stderr, "%d: Error: Initialization aborted.\n", pid);
+        fprintf(stderr, "%d:" ERROR_MSG "Initialization aborted.\n", pid);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
     omp_set_num_threads(args.nt);
     if (!exec(args.filename, args.k, args.np, args.nt, pid))
     {
-        fprintf(stderr, "%d: Error: Execution aborted.\n", pid);
+        fprintf(stderr, "%d:" ERROR_MSG "Error: Execution aborted.\n", pid);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
     if (pid == 0)
-        printf("Total execution time: %.3lfs\n", MPI_Wtime() - time);
+        printf("Total execution time: \e[1m%.3lfs\e[0m\n", MPI_Wtime() - time);
 
     MPI_Finalize();
 
