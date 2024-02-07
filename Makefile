@@ -2,7 +2,7 @@
 
 # Compiler related
 CC := mpicc
-CFLAGS = -std=c17 -I $(INC)
+CFLAGS = -std=c17 -I $(INC) -fopenmp
 
 # Directories related
 INC := inc
