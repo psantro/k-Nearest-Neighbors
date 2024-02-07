@@ -92,9 +92,10 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     int nday, ndays;
     int master_chunk_size, slaves_chunk_size, chunk_start, chunk_end;
 
-    // Step 1.1 Master loads dataset. Master initializes ndays and data buffer.
+    // Step 1.1 Master loads dataset.
     if (pid == 0)
     {
+        // Master initializes ndays and data buffer.
         int load_ok = knn_load_dataset(filename, &ndays, &data);
         if (!load_ok)
         {
@@ -104,6 +105,7 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     }
     else
     {
+        // Slaves initializes data to NULL.
         data = NULL;
     }
 
