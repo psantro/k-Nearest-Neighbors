@@ -123,10 +123,14 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
 
     // Step 2. Scatter excluding root dataset chunks (cannot use Scatter).
     if (pid == 0)
+    {
         for (npid = 1; npid < np; ++npid)
             MPI_Send(&data[(npid - 1) * slaves_chunk_size], slaves_chunk_size, MPI_FLOAT, npid, 0, MPI_COMM_WORLD);
+    }
     else
+    {
         MPI_Recv(data, slaves_chunk_size, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
 
     printf("%d: %.1f\n", pid, data[0]);
 
