@@ -63,7 +63,56 @@ static int load_dataset(int pid, char const *filename, int *ndays, float **data)
     }
 }
 
+static int initialize_chunk_metadata(int pid, int np, int master_chunk_size, int slaves_chunk_size,
+                                     int *chunk_size, float **chunk_data, int **chunk_counts, int **chunk_displs)
+{
+    if (pid == 0)
+    {
+        printf("Chunk size: %d (master), %d (slaves)\n", master_chunk_size, slaves_chunk_size);
+        printf("Initializing chunk metadata...");
+        *chunk_size = master_chunk_size;
+        *chunk_data = malloc(NHOURS * *chunk_size * sizeof **chunk_data);
+        if (*chunk_data == NULL)
+        {
+            fprintf(stderr, "failed\n%d: Error: Chunk data error.\n", pid);
+            return 0;
+        }
 
+        *chunk_counts = malloc(np * sizeof **chunk_counts);
+        if (*chunk_counts == NULL)
+        {
+            fprintf(stderr, "failed\n%d, Error: Chunk counts error.\n", pid);
+            return 0;
+        }
+
+        *chunk_displs = malloc(np * sizeof **chunk_displs);
+        if (*chunk_data == NULL)
+        {
+            fprintf(stderr, "failed\n%d: Error: Chunk displs error.\n", pid);
+            return 0;
+        }
+
+        (*chunk_counts)[0] = NHOURS * master_chunk_size;
+        for (int n = 1; n < np; ++n)
+            (*chunk_counts[n]) = NHOURS * slaves_chunk_size;
+
+        (*chunk_displs)[0] = 0;
+        for (int n = 1; n < np; ++n)
+            (*chunk_displs)[n] = (*chunk_displs)[n - 1] + (*chunk_counts)[n - 1];
+
+        printf("done\n");
+    }
+    else
+    {
+        *chunk_size = slaves_chunk_size;
+        *chunk_data = malloc(NHOURS * *chunk_size * sizeof **chunk_data);
+        if (*chunk_data == NULL)
+        {
+            fprintf(stderr, "\n%d: Error: Chunk data error.\n", pid);
+            return 0;
+        }
+    }
+}
 
 /**
  * @brief Calculates chunk size for master and slaves based on total and np;
@@ -105,49 +154,6 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     calculate_chunk_size(ndays - NPREDICTIONS, np, &master_chunk_size, &slaves_chunk_size);
 
     // Step 1.4. Master initializes chunk data and chunk counts. Slaves initializes chunk data.
-    if (pid == 0)
-    {
-        printf("Chunk size: %d (master), %d (slaves)\n", master_chunk_size, slaves_chunk_size);
-        chunk_size = master_chunk_size;
-        chunk_data = malloc(NHOURS * chunk_size * sizeof *chunk_data);
-        if (chunk_data == NULL)
-        {
-            fprintf(stderr, "%d: Error: Chunk data error.\n", pid);
-            return 0;
-        }
-
-        chunk_counts = malloc(np * sizeof *chunk_counts);
-        if (chunk_counts == NULL)
-        {
-            fprintf(stderr, "%d, Error: Chunk counts error.\n", pid);
-            return 0;
-        }
-
-        chunk_displs = malloc(np * sizeof *chunk_displs);
-        if (chunk_data == NULL)
-        {
-            fprintf(stderr, "%d: Error: Chunk displs error.\n", pid);
-            return 0;
-        }
-
-        chunk_counts[0] = NHOURS * master_chunk_size;
-        for (int n = 1; n < np; ++n)
-            chunk_counts[n] = NHOURS * slaves_chunk_size;
-
-        chunk_displs[0] = 0;
-        for (int n = 1; n < np; ++n)
-            chunk_displs[n] = chunk_displs[n - 1] + chunk_counts[n - 1];
-    }
-    else
-    {
-        chunk_size = slaves_chunk_size;
-        chunk_data = malloc(NHOURS * chunk_size * sizeof *chunk_data);
-        if (chunk_data == NULL)
-        {
-            fprintf(stderr, "%d: Error: Chunk data error.\n", pid);
-            return 0;
-        }
-    }
 
     // Step 2. Scatter excluding root dataset chunks (cannot use Scatter).
     if (pid == 0)
