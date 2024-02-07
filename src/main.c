@@ -79,7 +79,7 @@ static int exec(char const *filename, int k, int np, int nt)
         }
     }
 
-    // Step 2. Scatter dataset
+    // Step 2. Scatter dataset chunks.
     calculate_chunk_size(ndays - NPREDICTIONS, np, &master_chunk_size, &slaves_chunk_size);
     if (pid != 0)
     {
