@@ -91,7 +91,7 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     float *data, *chunk_data;
     int *chunk_counts, *chunk_displs;
     int nday, ndays, ok;
-    int chunk_size, master_chunk_size, slaves_chunk_size, chunk_start, chunk_end;
+    int master_chunk_size, slaves_chunk_size, chunk_size, chunk_start, chunk_end;
 
     // Step 1.1 Master loads dataset.
     if (pid == 0)
@@ -120,7 +120,8 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     // Step 1.4. Master initializes chunk data and chunk counts. Slaves initializes chunk data.
     if (pid == 0)
     {
-        chunk_data = malloc(master_chunk_size * sizeof *chunk_data);
+        chunk_size = master_chunk_size;
+        chunk_data = malloc(NHOURS * chunk_size * sizeof *chunk_data);
         if (chunk_data == NULL)
         {
             fprintf(stderr, "%d: Error: Chunk data error.\n", pid);
@@ -134,26 +135,25 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
             return 0;
         }
 
-        chunk_displs = malloc(master_chunk_size * sizeof *chunk_displs);
+        chunk_displs = malloc(np * sizeof *chunk_displs);
         if (chunk_data == NULL)
         {
             fprintf(stderr, "%d: Error: Chunk displs error.\n", pid);
             return 0;
         }
 
-        for (int n = 0; n < (np - 1); ++n)
-            chunk_counts[n] = slaves_chunk_size;
-        chunk_counts[np - 1] = master_chunk_size;
+        chunk_counts[0] = NHOURS * master_chunk_size;
+        for (int n = 1; n < np; ++n)
+            chunk_counts[n] = NHOURS * slaves_chunk_size;
 
-        for (int n = 0; n < np; ++n)
-            chunk_displs[n] = NHOURS;
-
-        for (int n = 0; n < np; ++n)
-            printf("%d\n", chunk_displs[n]);
+        chunk_displs[0] = 0;
+        for (int n = 1; n < np; ++n)
+            chunk_displs[n] = chunk_displs[n - 1] + chunk_counts[n - 1];
     }
     else
     {
-        chunk_data = malloc(slaves_chunk_size * sizeof *chunk_data);
+        chunk_size = slaves_chunk_size;
+        chunk_data = malloc(NHOURS * chunk_size * sizeof *chunk_data);
         if (chunk_data == NULL)
         {
             fprintf(stderr, "%d: Error: Chunk data error.\n", pid);
@@ -161,18 +161,17 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
         }
     }
 
-    /**
-     * @todo THIS DOES NOT WORK.
-     */
     // Step 2. Scatter excluding root dataset chunks (cannot use Scatter).
-    MPI_Scatterv(data, chunk_counts, chunk_displs, MPI_FLOAT, chunk_data, chunk_size, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    MPI_Scatterv(data, chunk_counts, chunk_displs, MPI_FLOAT, chunk_data, NHOURS * chunk_size, MPI_FLOAT, 0, MPI_COMM_WORLD);
     printf("%d: %.1f\n", pid, chunk_data[0]);
 
     // Step 3. Find Neighbors subgroups.
     for (nday = chunk_start; nday < chunk_end; ++nday)
     {
         // Step 3.1. Scatter
+        
         // Step 3.2. kNN
+
         // Step 3.3. Gather np * k subgroups.
     }
 
