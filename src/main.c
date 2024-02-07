@@ -89,9 +89,9 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
 {
     int npid;
     float *data, *chunk_data;
-    int *chunk_counts;
+    int *chunk_counts, *chunk_displs;
     int nday, ndays, ok;
-    int master_chunk_size, slaves_chunk_size, chunk_start, chunk_end;
+    int chunk_size, master_chunk_size, slaves_chunk_size, chunk_start, chunk_end;
 
     // Step 1.1 Master loads dataset.
     if (pid == 0)
@@ -134,9 +134,22 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
             return 0;
         }
 
-        chunk_counts[0] = master_chunk_size;
-        for (int n = 1; n < np; ++n)
+        chunk_displs = malloc(master_chunk_size * sizeof *chunk_displs);
+        if (chunk_data == NULL)
+        {
+            fprintf(stderr, "%d: Error: Chunk displs error.\n", pid);
+            return 0;
+        }
+
+        for (int n = 0; n < (np - 1); ++n)
             chunk_counts[n] = slaves_chunk_size;
+        chunk_counts[np - 1] = master_chunk_size;
+
+        for (int n = 0; n < np; ++n)
+            chunk_displs[n] = NHOURS;
+
+        for (int n = 0; n < np; ++n)
+            printf("%d\n", chunk_displs[n]);
     }
     else
     {
@@ -148,27 +161,28 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
         }
     }
 
+    /**
+     * @todo THIS DOES NOT WORK.
+     */
     // Step 2. Scatter excluding root dataset chunks (cannot use Scatter).
-    if (pid == 0)
-    {
-        for (npid = 1; npid < np; ++npid)
-            MPI_Send(&data[(npid - 1) * slaves_chunk_size], slaves_chunk_size, MPI_FLOAT, npid, 0, MPI_COMM_WORLD);
-    }
-    else
-    {
-        MPI_Recv(data, slaves_chunk_size, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    }
-
-    printf("%d: %.1f\n", pid, data[0]);
+    MPI_Scatterv(data, chunk_counts, chunk_displs, MPI_FLOAT, chunk_data, chunk_size, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    printf("%d: %.1f\n", pid, chunk_data[0]);
 
     // Step 3. Find Neighbors subgroups.
     for (nday = chunk_start; nday < chunk_end; ++nday)
     {
-        // Step 3.1. kNN
-        // Step 3.2. Gather np * k subgroups.
+        // Step 3.1. Scatter
+        // Step 3.2. kNN
+        // Step 3.3. Gather np * k subgroups.
     }
 
-    free(data);
+    free(chunk_data);
+    if (pid == 0)
+    {
+        free(chunk_counts);
+        free(chunk_displs);
+        free(data);
+    }
     return 1;
 }
 
