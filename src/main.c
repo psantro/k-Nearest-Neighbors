@@ -88,7 +88,7 @@ static void calculate_chunk_indexes(int pid, int np, int master_size, int slaves
 static int exec(char const *filename, int k, int np, int nt, int pid)
 {
     int npid;
-    float *data;
+    float *data, *chunk_data;
     int nday, ndays;
     int master_chunk_size, slaves_chunk_size, chunk_start, chunk_end;
 
@@ -101,6 +101,10 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
             fprintf(stderr, "Error: Dataset loading error.\n");
             return 0;
         }
+    }
+    else
+    {
+        data = NULL;
     }
 
     // Step 1.2. Slaves initializes ndays.
