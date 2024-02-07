@@ -47,10 +47,13 @@ static int init(int argc, char **argv, struct knn_args *args)
  */
 static int load_dataset(int pid, char const *filename, int *ndays, float **data)
 {
+    int load_ok;
+
     if (pid == 0)
     {
         printf("Loading dataset...");
-        if (!knn_load_dataset(filename, ndays, data))
+        load_ok = knn_load_dataset(filename, ndays, data);
+        if (!load_ok)
         {
             fprintf(stderr, "failed\n%d: Error: Dataset loading error.\n", pid);
             return 0;
@@ -61,6 +64,35 @@ static int load_dataset(int pid, char const *filename, int *ndays, float **data)
     {
         data = NULL;
     }
+
+    return 1;
+}
+
+/**
+ * @brief Broadcast number of days.
+ *
+ * @param       pid     Process id.
+ * @param[out]  ndays   Number of days.
+ * @return On failure returns zero.
+ */
+static int broadcast_ndays(int pid, int *ndays)
+{
+    int bcast_ok;
+
+    if (pid == 0)
+        printf("Broadcasting ndays...");
+
+    bcast_ok = MPI_Bcast(ndays, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
+    if (bcast_ok != MPI_SUCCESS)
+    {
+        fprintf(stderr, "failed\n%d: Error: Broadcast ndays error.\n", pid);
+        return 0;
+    }
+
+    if (pid == 0)
+        printf("done\n");
+
+    return 1;
 }
 
 /**
@@ -93,7 +125,7 @@ static int initialize_chunk_metadata(int pid, int np, int chunk_ndays,
                                      int *chunk_size, float **chunk_data,
                                      int **chunk_counts, int **chunk_displs)
 {
-    int master_chunk_size, slaves_chunk_size;
+    int master_chunk_size, slaves_chunk_size, n;
 
     calculate_chunk_size(chunk_ndays, np, &master_chunk_size, &slaves_chunk_size);
     if (pid == 0)
@@ -122,11 +154,11 @@ static int initialize_chunk_metadata(int pid, int np, int chunk_ndays,
         }
 
         (*chunk_counts)[0] = NHOURS * master_chunk_size;
-        for (int n = 1; n < np; ++n)
+        for (n = 1; n < np; ++n)
             (*chunk_counts)[n] = NHOURS * slaves_chunk_size;
 
         (*chunk_displs)[0] = 0;
-        for (int n = 1; n < np; ++n)
+        for (n = 1; n < np; ++n)
             (*chunk_displs)[n] = (*chunk_displs)[n - 1] + (*chunk_counts)[n - 1];
 
         printf("done\n");
@@ -142,6 +174,8 @@ static int initialize_chunk_metadata(int pid, int np, int chunk_ndays,
             return 0;
         }
     }
+
+    return 1;
 }
 
 /**
@@ -162,7 +196,7 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     if (!load_dataset(pid, filename, &ndays, &data))
         return 0;
 
-    if (MPI_Bcast(&ndays, 1, MPI_INTEGER, 0, MPI_COMM_WORLD) != MPI_SUCCESS)
+    if (!broadcast_ndays(pid, &ndays))
         return 0;
 
     if (!initialize_chunk_metadata(pid, np, ndays - NPREDICTIONS, &chunk_size, &chunk_data, &chunk_counts, &chunk_displs))
