@@ -96,8 +96,6 @@ static int initialize_chunk_metadata(int pid, int np, int chunk_ndays,
     int master_chunk_size, slaves_chunk_size;
 
     calculate_chunk_size(chunk_ndays, np, &master_chunk_size, &slaves_chunk_size);
-    printf("Chunk size: %d (master), %d (slaves)\n", master_chunk_size, slaves_chunk_size);
-
     if (pid == 0)
     {
         printf("Initializing chunk metadata...");
@@ -132,6 +130,7 @@ static int initialize_chunk_metadata(int pid, int np, int chunk_ndays,
             (*chunk_displs)[n] = (*chunk_displs)[n - 1] + (*chunk_counts)[n - 1];
 
         printf("done\n");
+        printf("Chunk size: %d (master), %d (slaves)\n", master_chunk_size, slaves_chunk_size);
     }
     else
     {
@@ -157,10 +156,8 @@ static int initialize_chunk_metadata(int pid, int np, int chunk_ndays,
  */
 static int exec(char const *filename, int k, int np, int nt, int pid)
 {
-    int npid;
     float *data, *chunk_data, target[NHOURS];
-    int *chunk_counts, *chunk_displs;
-    int nday, ndays, ok;
+    int nday, ndays, chunk_size, *chunk_counts, *chunk_displs;
 
     if (!load_dataset(pid, filename, &ndays, &data))
         return 0;
