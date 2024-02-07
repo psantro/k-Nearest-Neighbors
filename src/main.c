@@ -62,8 +62,8 @@ static void calculate_chunk_size(int total, int np, int *master_size, int *slave
 static int exec(char const *filename, int k, int np, int nt)
 {
     float *data;
-    int pid, ndays, load_ok;
-    dataset data_to_analize, data_to_predict;
+    int pid, ndays, load_ok, alloc_ok;
+    // dataset data_to_analize, data_to_predict;
     int master_chunk_size, slaves_chunk_size;
 
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
@@ -79,9 +79,21 @@ static int exec(char const *filename, int k, int np, int nt)
         }
     }
 
-    // Step 2? Broadcast chunksize.
+    // Step 2. Scatter dataset
     calculate_chunk_size(ndays - NPREDICTIONS, np, &master_chunk_size, &slaves_chunk_size);
-    MPI_Bcast(&slaves_chunk_size, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
+    if (pid != 0)
+    {
+        alloc_ok = knn_allocate_dataset(slaves_chunk_size, &data);
+        if (!alloc_ok)
+        {
+            fprintf(stderr, "Error: Allocation error.\n");
+            return 0;
+        }
+    }
+
+    MPI_Scatter(data, np * NHOURS * slaves_chunk_size, MPI_FLOAT, data, NHOURS * slaves_chunk_size, 0, MPI_COMM_WORLD);
+
+    // Step 3.
 
     /**
      * @todo Make loop scattering and gathering neighbors.
