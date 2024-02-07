@@ -148,17 +148,6 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
         }
     }
 
-    // Step 1.5. Slaves initializes data buffer.
-    if (pid != 0)
-    {
-        ok = knn_allocate_dataset(slaves_chunk_size, &data);
-        if (!ok)
-        {
-            fprintf(stderr, "%d: Error: Allocation error.\n", pid);
-            return 0;
-        }
-    }
-
     // Step 2. Scatter excluding root dataset chunks (cannot use Scatter).
     if (pid == 0)
     {
