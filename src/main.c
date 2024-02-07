@@ -37,7 +37,7 @@ static int init(int argc, char **argv, struct knn_args *args)
 }
 
 /**
- * @brief Calculates chunks size for master and slaves based on total and np;
+ * @brief Calculates chunk size for master and slaves based on total and np;
  *
  * @param       total               Total of data to analize.
  * @param       np                  Number of processes.
@@ -51,6 +51,31 @@ static void calculate_chunk_size(int total, int np, int *master_size, int *slave
 }
 
 /**
+ * @brief Calculates chunk range based on chunk size and pid.
+ * Ordered by pid as ranked slaves first (1, 2, 3, ...) and master last (0).
+ *
+ * @param       pid         Process id.
+ * @param       np          Number of processes.
+ * @param       master_size Master chunk size.
+ * @param       slaves_size Slaves chunk size.
+ * @param[out]  start       Chunk start index.
+ * @param[out]  end         Chunk end index.
+ */
+static void calculate_chunk_indexes(int pid, int np, int master_size, int slaves_size, int *start, int *end)
+{
+    if (pid != 0)
+    {
+        *start = (pid - 1) * slaves_size;
+        *end = *start + slaves_size;
+    }
+    else
+    {
+        *start = (np - 1) * slaves_size;
+        *end = *start + master_size;
+    }
+}
+
+/**
  * @brief Executes program.
  *
  * @param[in]   filename    Dataset filename.
@@ -61,17 +86,19 @@ static void calculate_chunk_size(int total, int np, int *master_size, int *slave
  */
 static int exec(char const *filename, int k, int np, int nt)
 {
+    int pid;
     float *data;
-    int pid, ndays, load_ok, alloc_ok;
+    int nday, ndays;
+    int master_chunk_size, slaves_chunk_size, chunk_start, chunk_end;
     // dataset data_to_analize, data_to_predict;
-    int master_chunk_size, slaves_chunk_size;
 
+    // Step 1.1. Initialize pid.
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
 
-    // Step 1. Master loads dataset.
+    // Step 1.2 Master loads dataset. Master initializes ndays and data buffer.
     if (pid == 0)
     {
-        load_ok = knn_load_dataset(filename, &ndays, &data);
+        int load_ok = knn_load_dataset(filename, &ndays, &data);
         if (!load_ok)
         {
             fprintf(stderr, "Error: Dataset loading error.\n");
@@ -79,11 +106,17 @@ static int exec(char const *filename, int k, int np, int nt)
         }
     }
 
-    // Step 2. Scatter dataset chunks.
+    // Step 1.3. Slaves initializes ndays.
+    MPI_Bcast(&ndays, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
+
+    // Step 1.4. All initialize chunk sizes and chunk indexes (start-end).
     calculate_chunk_size(ndays - NPREDICTIONS, np, &master_chunk_size, &slaves_chunk_size);
+    calculate_chunk_indexes(pid, np, master_chunk_size, slaves_chunk_size, &chunk_start, &chunk_end);
+
+    // Step 1.5. Slaves initializes data buffer.
     if (pid != 0)
     {
-        alloc_ok = knn_allocate_dataset(slaves_chunk_size, &data);
+        int alloc_ok = knn_allocate_dataset(slaves_chunk_size, &data);
         if (!alloc_ok)
         {
             fprintf(stderr, "Error: Allocation error.\n");
@@ -91,10 +124,15 @@ static int exec(char const *filename, int k, int np, int nt)
         }
     }
 
-    MPI_Scatter(data, np * NHOURS * slaves_chunk_size, MPI_FLOAT, data, NHOURS * slaves_chunk_size, 0, MPI_COMM_WORLD);
+    // Step 2. Scatter dataset chunks.
+    MPI_Scatter(data, (np - 1) * NHOURS * slaves_chunk_size, MPI_FLOAT, data, NHOURS * slaves_chunk_size, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-    // Step 3.
-
+    // Step 3. Find Neighbors subgroups.
+    for (nday = chunk_start; nday < chunk_end; ++nday)
+    {
+        // Step 3.1. kNN
+        // Step 3.2. Gather np * k subgroups.
+    }
     /**
      * @todo Make loop scattering and gathering neighbors.
      */
