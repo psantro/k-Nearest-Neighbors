@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "datasetio.h"
+#include "knn.h"
 
 #define DONE_MSG "\e[1;34mdone\e[22;39m\n"
 #define FAILED_MSG "\e[1;31mfailed\e[22;39m\n"
@@ -263,18 +264,30 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     if (!scatter_chunks(pid, data, chunk_counts, chunk_displs, chunk_data, chunk_size))
         return 0;
 
+    // Create type
+    int blocklengths[] = {1, 1};
+    MPI_Datatype types[] = {MPI_FLOAT, MPI_INTEGER};
+    MPI_Datatype mpi_neighbor_type;
+    MPI_Aint offsets[] = {offsetof(knn_neighbor, eval), offsetof(knn_neighbor, index)};
+
+    MPI_Type_create_struct(2, blocklengths, offsets, types, &mpi_neighbor_type);
+    MPI_Type_commit(&mpi_neighbor_type);
+
     // Step 3. Find Neighbors subgroups.
+
     for (nday = ndays - NPREDICTIONS; nday < ndays; ++nday)
     {
         // Step 3.1. Scatter
         MPI_Scatter(&data[ndays - NPREDICTIONS + nday], NHOURS, MPI_FLOAT, target, NHOURS, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
         // Step 3.2. kNN
-        // knn_kNN(k, target, chunk_data, chunk_size, )
+        // knn_kNN(k, target, chunk_data, chunk_size, &neighbors[nday]);
 
         // Step 3.3. Gather np * k subgroups.
+        // MPI_Gather();
     }
 
+    MPI_Type_free(&mpi_neighbor_type);
     cleanup(pid, chunk_data, chunk_counts, chunk_displs, data);
     return 1;
 }
