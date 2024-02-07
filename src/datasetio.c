@@ -54,7 +54,6 @@ static int scan_body(FILE *file, int ndays, float **data)
 
 int knn_allocate_dataset(int ndays, float **data)
 {
-    assert(ndays > NPREDICTIONS);
     assert(data != NULL);
 
     *data = malloc(ndays * NHOURS * sizeof **data);
