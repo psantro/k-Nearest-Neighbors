@@ -19,6 +19,6 @@ typedef struct knn_neighbor_index_eval_pair
  * @param       size        Data row count.
  * @param[out]  neighbors   Array of k-Nearest Neighbors to target indexes.
  */
-void knn_kNN(int k, float const target[NHOURS], float const data[][NHOURS], int size, knn_neighbor neighbors[]);
+void knn_kNN(int k, float const *target, float const *data, int size, knn_neighbor *neighbors);
 
 #endif
