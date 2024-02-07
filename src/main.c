@@ -48,11 +48,22 @@ static int init(int argc, char **argv, struct knn_args *args)
 static int load_dataset(int pid, char const *filename, int *ndays, float **data)
 {
     if (pid == 0)
+    {
+        printf("Loading dataset...");
         if (!knn_load_dataset(filename, ndays, data))
+        {
+            fprintf(stderr, "failed\n%d: Error: Dataset loading error.\n", pid);
             return 0;
-        else
-            data = NULL;
+        }
+        printf("done\n");
+    }
+    else
+    {
+        data = NULL;
+    }
 }
+
+
 
 /**
  * @brief Calculates chunk size for master and slaves based on total and np;
@@ -86,14 +97,8 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     int nday, ndays, ok;
     int master_chunk_size, slaves_chunk_size, chunk_size;
 
-    printf("Loading dataset...");
-    ok = load_dataset(pid, filename, &ndays, &data);
-    if (!ok)
-    {
-        fprintf(stderr, "%d: Error: Dataset loading error.\n", pid);
+    if (!load_dataset(pid, filename, &ndays, &data))
         return 0;
-    }
-    printf("ok\n");
 
     MPI_Bcast(&ndays, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
 
