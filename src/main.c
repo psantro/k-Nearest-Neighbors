@@ -208,6 +208,26 @@ static int scatter_chunks(int pid, float const *data, int const *chunk_counts, i
 }
 
 /**
+ * @brief Clean everything.
+ *
+ * @param           pid             Process id.
+ * @param[inout]    chunk_data      Chunk data.
+ * @param[inout]    chunk_counts    Chunk counts.
+ * @param[inout]    chunk_displs    Chunk displacements.
+ * @param[inout]    data            Dataset data.
+ */
+static void cleanup(int pid, float *chunk_data, int *chunk_counts, int *chunk_displs, float *data)
+{
+    free(chunk_data);
+    if (pid == 0)
+    {
+        free(chunk_counts);
+        free(chunk_displs);
+        free(data);
+    }
+}
+
+/**
  * @brief Executes program.
  *
  * @param[in]   filename    Dataset filename.
@@ -246,13 +266,7 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
         // Step 3.3. Gather np * k subgroups.
     }
 
-    free(chunk_data);
-    if (pid == 0)
-    {
-        free(chunk_counts);
-        free(chunk_displs);
-        free(data);
-    }
+    cleanup(pid, chunk_data, chunk_counts, chunk_displs, data);
     return 1;
 }
 
