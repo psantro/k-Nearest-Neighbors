@@ -211,6 +211,11 @@ static int scatter_chunks(int pid, float const *data, int const *chunk_counts, i
     return 1;
 }
 
+static int find_k_neighbors(float *target)
+{
+    return 1;
+}
+
 /**
  * @brief Clean everything.
  *
