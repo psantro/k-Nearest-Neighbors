@@ -89,17 +89,18 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
 {
     int npid;
     float *data, *chunk_data;
-    int nday, ndays;
+    int *chunk_counts;
+    int nday, ndays, ok;
     int master_chunk_size, slaves_chunk_size, chunk_start, chunk_end;
 
     // Step 1.1 Master loads dataset.
     if (pid == 0)
     {
         // Master initializes ndays and data buffer.
-        int load_ok = knn_load_dataset(filename, &ndays, &data);
-        if (!load_ok)
+        ok = knn_load_dataset(filename, &ndays, &data);
+        if (!ok)
         {
-            fprintf(stderr, "Error: Dataset loading error.\n");
+            fprintf(stderr, "%d: Error: Dataset loading error.\n", pid);
             return 0;
         }
     }
@@ -116,13 +117,44 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     calculate_chunk_size(ndays - NPREDICTIONS, np, &master_chunk_size, &slaves_chunk_size);
     calculate_chunk_indexes(pid, np, master_chunk_size, slaves_chunk_size, &chunk_start, &chunk_end);
 
-    // Step 1.4. Slaves initializes data buffer.
+    // Step 1.4. Master initializes chunk data and chunk counts. Slaves initializes chunk data.
+    if (pid == 0)
+    {
+        chunk_data = malloc(master_chunk_size * sizeof *chunk_data);
+        if (chunk_data == NULL)
+        {
+            fprintf(stderr, "%d: Error: Chunk data error.\n", pid);
+            return 0;
+        }
+
+        chunk_counts = malloc(np * sizeof *chunk_counts);
+        if (chunk_counts == NULL)
+        {
+            fprintf(stderr, "%d, Error: Chunk counts error.\n", pid);
+            return 0;
+        }
+
+        chunk_counts[0] = master_chunk_size;
+        for (int n = 1; n < np; ++n)
+            chunk_counts[n] = slaves_chunk_size;
+    }
+    else
+    {
+        chunk_data = malloc(slaves_chunk_size * sizeof *chunk_data);
+        if (chunk_data == NULL)
+        {
+            fprintf(stderr, "%d: Error: Chunk data error.\n", pid);
+            return 0;
+        }
+    }
+
+    // Step 1.5. Slaves initializes data buffer.
     if (pid != 0)
     {
-        int alloc_ok = knn_allocate_dataset(slaves_chunk_size, &data);
-        if (!alloc_ok)
+        ok = knn_allocate_dataset(slaves_chunk_size, &data);
+        if (!ok)
         {
-            fprintf(stderr, "Error: Allocation error.\n");
+            fprintf(stderr, "%d: Error: Allocation error.\n", pid);
             return 0;
         }
     }
@@ -166,14 +198,14 @@ int main(int argc, char **argv)
 
     if (!init(argc, argv, &args))
     {
-        fprintf(stderr, "Error: Initialization aborted.\n");
+        fprintf(stderr, "%d: Error: Initialization aborted.\n", pid);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
     omp_set_num_threads(args.nt);
     if (!exec(args.filename, args.k, args.np, args.nt, pid))
     {
-        fprintf(stderr, "Error: Execution aborted.\n");
+        fprintf(stderr, "%d: Error: Execution aborted.\n", pid);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
