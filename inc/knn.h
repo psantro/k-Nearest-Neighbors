@@ -24,4 +24,13 @@ typedef struct knn_neighbor_index_eval_pair
  */
 void knn_kNN(int k, float const *target, float const *data, int size, knn_neighbor *kn);
 
+/**
+ * @brief Bubble sort knn array.
+ *
+ * @param           k   Nearest Neighbors.
+ * @param[inout]    nk  Array of k-Nearest Neighbors to target indexes.
+ * @param           asc Ascending.
+ */
+void knn_bubble_sort_array(int k, knn_neighbor *nk, int asc);
+
 #endif
