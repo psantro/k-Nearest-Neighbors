@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -17,8 +18,8 @@ static void initialize_array(int k, float const *target, float const *data, knn_
 {
     for (int n = 0; n < k; ++n)
         nk[n] = (knn_neighbor){
-            .index = n,
-            .eval = calculate_distance(&data[n * NHOURS], target)};
+            .eval = calculate_distance(&data[n * NHOURS], target),
+            .index = n};
 }
 
 static void swap_neighbor(knn_neighbor *a, knn_neighbor *b)
@@ -35,40 +36,44 @@ static void bubble_sort_array(int k, knn_neighbor *nk)
     {
         nswaps = 0;
         for (int n = 0; n < k - 1; ++n)
-            if (nk[n].eval > nk[n + 1].eval)
+            if (nk[n].eval < nk[n + 1].eval)
                 swap_neighbor(&nk[n], &nk[n + 1]), ++nswaps;
     } while (nswaps != 0);
 }
 
+static void sink_first(int k, knn_neighbor *nk)
+{
+    int n = 0;
+    while (nk[n].eval < nk[n + 1].eval && n < k)
+        swap_neighbor(&nk[n], &nk[n + 1]), ++n;
+}
+
+static void find_k(int k, float const *target, float const *data, int size, knn_neighbor *nk)
+{
+    float dst;
+    for (int n = k; n < size; ++n)
+    {
+        dst = calculate_distance(&data[n * NHOURS], target);
+
+        if (dst < nk[0].eval)
+        {
+            nk[0] = (knn_neighbor){
+                .eval = dst,
+                .index = n};
+            sink_first(k, nk);
+        }
+    }
+}
+
 void knn_kNN(int k, float const *target, float const *data, int size, knn_neighbor *nk)
 {
-    int i, j;
-    float temp_distance;
+    assert(k > 0);
+    assert(target != NULL);
+    assert(data != NULL);
+    assert(size > 0);
+    assert(nk != NULL);
 
     initialize_array(k, target, data, nk);
     bubble_sort_array(k, nk);
-
-    for (i = k; i < size; i++)
-    {
-        temp_distance = calculate_distance(&data[i * NHOURS], target);
-
-        if (temp_distance < nk[k - 1].eval)
-        {
-            nk[k - 1].index = i;
-            nk[k - 1].eval = temp_distance;
-
-            for (j = 0; j < k - 1; j++)
-            {
-                for (int l = 0; l < k - j - 1; l++)
-                {
-                    if (nk[l].eval > nk[l + 1].eval)
-                    {
-                        temp_neighbor = nk[l];
-                        nk[l] = nk[l + 1];
-                        nk[l + 1] = temp_neighbor;
-                    }
-                }
-            }
-        }
-    }
+    find_k(k, target, data, size, nk);
 }
