@@ -282,8 +282,9 @@ static int find_k_neighbors(int pid, int np, int k, knn_neighbor *npkn, knn_neig
     return 1;
 }
 
-static int find_neighbors(int pid, int np, int k, int ndays, float *data, int chunk_start, int chunk_size, float *chunk_data)
+static int find_neighbors(int pid, int np, int k, int ndays, float *data, int chunk_start, int chunk_size, float *chunk_data, knn_neighbor **neighbors)
 {
+    knn_neighbor *kn, *npkn;
 
     int blocklengths[] = {1, 1};
     MPI_Datatype types[] = {MPI_FLOAT, MPI_INT};
@@ -293,8 +294,11 @@ static int find_neighbors(int pid, int np, int k, int ndays, float *data, int ch
     MPI_Type_create_struct(2, blocklengths, offsets, types, &mpi_neighbor_type);
     MPI_Type_commit(&mpi_neighbor_type);
 
-    knn_neighbor *kn = malloc(k * NPREDICTIONS * sizeof *kn);
-    knn_neighbor *npkn = malloc(np * k * NPREDICTIONS * sizeof *npkn);
+    if (pid == 0)
+    {
+        kn = *neighbors = malloc(k * NPREDICTIONS * sizeof *kn);
+        npkn = malloc(np * k * NPREDICTIONS * sizeof *npkn);
+    }
 
     find_npk_neighbors(pid, np, k, ndays, data, chunk_start, chunk_data, chunk_size, mpi_neighbor_type, npkn);
     find_k_neighbors(pid, np, k, npkn, kn);
@@ -320,7 +324,7 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
 {
     float *data, *chunk_data;
     int ndays, chunk_start, chunk_size, *chunk_counts, *chunk_displs;
-    knn_neighbor *kn = malloc(k * sizeof *kn);
+    knn_neighbor *neighbors;
 
     if (!load_dataset(pid, filename, &ndays, &data))
         return 0;
@@ -337,7 +341,7 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     if (pid == 0)
         free(chunk_counts), free(chunk_displs);
 
-    if (!find_neighbors(pid, np, k, ndays, data, chunk_start, chunk_size, chunk_data))
+    if (!find_neighbors(pid, np, k, ndays, data, chunk_start, chunk_size, chunk_data, &neighbors))
         return 0;
 
     free(chunk_data);
