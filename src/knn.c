@@ -77,3 +77,34 @@ void knn_kNN(int k, float const *target, float const *data, int size, knn_neighb
     bubble_sort_array(k, nk);
     find_k(k, target, data, size, nk);
 }
+
+void knn_prediction(int k, knn_neighbor const *neighbors, float const *data, float *predictions)
+{
+    // Iterators
+    int prediction, neighbor, hour;
+    float sum;
+
+    for (prediction = 0; prediction < NPREDICTIONS; prediction++)
+    {
+        for (hour = 0; hour < NHOURS; hour++)
+        {
+            sum = 0;
+            for (neighbor = 0; neighbor < k; neighbor++)
+            {
+                sum += data[(neighbors[(prediction * k) + neighbor].index * NHOURS) + hour];
+            }
+            predictions[(prediction * NHOURS) + hour];
+        }
+    }
+}
+
+static void knn_save_prediction(FILE *f, float *predictions)
+{
+    size_t nhours;
+
+    for (nhours = 0; nhours < NHOURS - 1; nhours++)
+    {
+        fprintf(f, "%f,", predictions[nhours]);
+    }
+    fprintf(f, "%f\n", predictions[nhours]);
+}
