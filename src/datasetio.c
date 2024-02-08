@@ -102,10 +102,40 @@ int knn_load_dataset(char const *filename, int *ndays, float **data)
 
 int knn_save_predictions(char const *filename, float *predictions)
 {
-    return 0;
+    FILE *file = fopen(filename, "w");
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error: Could not open file \"%s\".\n", filename);
+        return 0;
+    }
+
+    for (int nprediction = 0; nprediction < NPREDICTIONS; ++nprediction)
+    {
+        for (int nhour = 0; nhour < NHOURS - 1; ++nhour)
+            printf("%.1f,", predictions[nhour + nprediction * NHOURS]);
+        printf("%.1f\n", predictions[NHOURS - 1 + nprediction * NHOURS]);
+    }
+
+    fclose(file);
+    return 1;
 }
 
 int knn_save_mape(char const *filename, float *mape)
 {
-    return 0;
+    FILE *file = fopen(filename, "w");
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error: Could not open file \"%s\".\n", filename);
+        return 0;
+    }
+
+    for (int nprediction = 0; nprediction < NPREDICTIONS; ++nprediction)
+    {
+        for (int nhour = 0; nhour < NHOURS - 1; ++nhour)
+            printf("%.1f,", mape[nhour + nprediction * NHOURS]);
+        printf("%.1f\n", mape[NHOURS - 1 + nprediction * NHOURS]);
+    }
+
+    fclose(file);
+    return 1;
 }
