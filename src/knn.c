@@ -93,7 +93,7 @@ void knn_prediction(int k, knn_neighbor const *neighbors, float const *data, flo
             {
                 sum += data[(neighbors[(prediction * k) + neighbor].index * NHOURS) + hour];
             }
-            predictions[(prediction * NHOURS) + hour];
+            predictions[(prediction * NHOURS) + hour] = sum / k;
         }
     }
 }
@@ -102,4 +102,6 @@ void knn_save_prediction(float *predictions)
 {
     FILE *f = fopen("../out/predictions.txt", "w");
     int hour;
+
+
 }
