@@ -265,7 +265,7 @@ static int find_npk_neighbors(int pid, int np, int k, int ndays, float *data, in
     return 1;
 }
 
-static int find_k_neighbors(int pid, int np, int k, knn_neighbor const *npkn, knn_neighbor *kn)
+static int find_k_neighbors(int pid, int np, int k, knn_neighbor *npkn, knn_neighbor *kn)
 {
     if (pid == 0)
     {
@@ -280,7 +280,7 @@ static int find_k_neighbors(int pid, int np, int k, knn_neighbor const *npkn, kn
     }
 }
 
-static int find_neighbors(int pid, int k, int np, int ndays, float *data, int chunk_start, int chunk_size, float *chunk_data)
+static int find_neighbors(int pid, int np, int k, int ndays, float *data, int chunk_start, int chunk_size, float *chunk_data)
 {
 
     int blocklengths[] = {1, 1};
@@ -297,6 +297,12 @@ static int find_neighbors(int pid, int k, int np, int ndays, float *data, int ch
     find_npk_neighbors(pid, np, k, ndays, data, chunk_start, chunk_data, chunk_size, mpi_neighbor_type, npkn);
     find_k_neighbors(pid, np, k, npkn, kn);
 
+    if (pid == 0)
+    {
+        for (int i = 0; i < k; ++i)
+            printf("%f ", kn[i].eval);
+        putchar('\n');
+    }
     free(npkn);
 
     MPI_Type_free(&mpi_neighbor_type);
@@ -335,7 +341,9 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     if (pid == 0)
         free(chunk_counts), free(chunk_displs);
 
-    // Step 3. Find Neighbors subgroups.
+    if (!find_neighbors(pid, np, k, ndays, data, chunk_start, chunk_size, chunk_data))
+        return 0;
+
     free(chunk_data);
 
     // here goes more code

@@ -74,7 +74,7 @@ void knn_kNN(int k, float const *target, float const *data, int size, knn_neighb
     assert(nk != NULL);
 
     initialize_array(k, target, data, nk);
-    bubble_sort_array(k, nk, 0);
+    knn_bubble_sort_array(k, nk, 0);
     find_k(k, target, data, size, nk);
 }
 
