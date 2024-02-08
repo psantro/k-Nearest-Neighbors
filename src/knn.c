@@ -3,14 +3,6 @@
 #include <math.h>
 #include "knn.h"
 
-/**
- * @brief Calculate distance between two days
- *
- * @param   neighbor    Day to comparate.
- * @param   target      Target day.
- *
- * @return Distance.
- */
 static float calculate_distance(float const *neighbor, float const *target)
 {
     float total_distance = 0.0;
@@ -23,34 +15,38 @@ static float calculate_distance(float const *neighbor, float const *target)
 
 static void initialize_array(int k, float const *target, float const *data, knn_neighbor *nk)
 {
-    int n;
-
-    for (n = 0; n < k; ++n)
+    for (int n = 0; n < k; ++n)
         nk[n] = (knn_neighbor){
             .index = n,
             .eval = calculate_distance(&data[n * NHOURS], target)};
+}
+
+static void swap_neighbor(knn_neighbor *a, knn_neighbor *b)
+{
+    knn_neighbor tmp;
+    tmp = *a, *a = *b, *b = tmp;
+}
+
+static void bubble_sort_array(int k, knn_neighbor *nk)
+{
+    int nswaps;
+
+    do
+    {
+        nswaps = 0;
+        for (int n = 0; n < k - 1; ++n)
+            if (nk[n].eval > nk[n + 1].eval)
+                swap_neighbor(&nk[n], &nk[n + 1]), ++nswaps;
+    } while (nswaps != 0);
 }
 
 void knn_kNN(int k, float const *target, float const *data, int size, knn_neighbor *nk)
 {
     int i, j;
     float temp_distance;
-    knn_neighbor temp_neighbor;
 
     initialize_array(k, target, data, nk);
-
-    for (i = 0; i < k - 1; i++)
-    {
-        for (j = 0; j < k - i - 1; j++)
-        {
-            if (nk[j].eval > nk[j + 1].eval)
-            {
-                temp_neighbor = nk[j];
-                nk[j] = nk[j + 1];
-                nk[j + 1] = temp_neighbor;
-            }
-        }
-    }
+    bubble_sort_array(k, nk);
 
     for (i = k; i < size; i++)
     {
