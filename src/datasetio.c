@@ -99,3 +99,13 @@ int knn_load_dataset(char const *filename, int *ndays, float **data)
     fclose(file);
     return 1;
 }
+
+int knn_save_predictions(char const *filename, float *predictions)
+{
+    return 0;
+}
+
+int knn_save_mape(char const *filename, float *mape)
+{
+    return 0;
+}

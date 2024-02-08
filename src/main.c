@@ -329,7 +329,7 @@ static int make_predictions(int pid, int k, int ndays, float *data, float *neigh
         if (*mape == NULL)
             return 0;
 
-        knn_save_predictions(k, ndays, neighbors, data, *predictions, *mape);
+        knn_predictions(k, ndays, neighbors, data, *predictions, *mape);
 
         printf(DONE_MSG);
     }

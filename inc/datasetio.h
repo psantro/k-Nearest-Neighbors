@@ -27,13 +27,8 @@ int knn_allocate_dataset(int ndays, float **data);
  */
 int knn_load_dataset(char const *filename, int *ndays, float **data);
 
-/**
- * @brief Saves a dataset given a filename.
- *
- * @param[in]   filename    Output dataset filename.
- * @param[in]   dataset     Dataset to append.
- * @return On failure return zero.
- */
-// int knn_save_dataset(char const *filename, knn_dataset const *dataset);
+int knn_save_predictions(char const *filename, float *predictions);
+
+int knn_save_mape(char const *filename, float *mape);
 
 #endif
