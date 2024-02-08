@@ -87,7 +87,7 @@ static int broadcast_ndays(int pid, int *ndays)
     if (pid == 0)
         printf("Broadcasting ndays...");
 
-    bcast_ok = MPI_Bcast(ndays, 1, MPI_INTEGER, 0, MPI_COMM_WORLD);
+    bcast_ok = MPI_Bcast(ndays, 1, MPI_INT, 0, MPI_COMM_WORLD);
     if (bcast_ok != MPI_SUCCESS)
     {
         fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Broadcast ndays error.\n", pid);
@@ -235,7 +235,7 @@ static void remap_chunk_to_global_indexes(int k, knn_neighbor *kn, int offset)
 static int find_npk_neighbors(int pid, int np, int k, int ndays, float *data, int chunk_start, float *chunk_data, int chunk_size, MPI_Datatype mpi_neighbor_type, knn_neighbor *npkn)
 {
     float target[NHOURS];
-    knn_neighbor *kn = malloc(k * sizeof *kn);
+    knn_neighbor *nk = malloc(k * sizeof *nk);
 
     if (pid == 0)
         printf("Getting npkn-Nearest Neighbors...");
@@ -248,10 +248,10 @@ static int find_npk_neighbors(int pid, int np, int k, int ndays, float *data, in
             return 0;
         }
 
-        knn_kNN(k, target, chunk_data, chunk_size, kn);
-        remap_chunk_to_global_indexes(np * k, kn, chunk_start);
+        knn_kNN(k, target, chunk_data, chunk_size, nk);
+        remap_chunk_to_global_indexes(k, nk, chunk_start);
 
-        if (MPI_Gather(&npkn[current * np * k], k, mpi_neighbor_type, kn, k, mpi_neighbor_type, 0, MPI_COMM_WORLD) != MPI_SUCCESS)
+        if (MPI_Gather(nk, k, mpi_neighbor_type, &npkn[current * np * k], k, mpi_neighbor_type, 0, MPI_COMM_WORLD) != MPI_SUCCESS)
         {
             fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Gather error.\n", pid);
             return 0;
@@ -261,7 +261,7 @@ static int find_npk_neighbors(int pid, int np, int k, int ndays, float *data, in
     if (pid == 0)
         printf(DONE_MSG);
 
-    free(kn);
+    free(nk);
     return 1;
 }
 
@@ -278,31 +278,31 @@ static int find_k_neighbors(int pid, int np, int k, knn_neighbor *npkn, knn_neig
         }
         printf(DONE_MSG);
     }
+
+    return 1;
 }
 
-static int find_neighbors(int pid, int np, int k, int ndays, float *data, int chunk_start, int chunk_size, float *chunk_data)
+static int find_neighbors(int pid, int np, int k, int ndays, float *data, int chunk_start, int chunk_size, float *chunk_data, knn_neighbor **neighbors)
 {
+    knn_neighbor *kn, *npkn;
 
     int blocklengths[] = {1, 1};
-    MPI_Datatype types[] = {MPI_FLOAT, MPI_INTEGER};
+    MPI_Datatype types[] = {MPI_FLOAT, MPI_INT};
     MPI_Datatype mpi_neighbor_type;
     MPI_Aint offsets[] = {offsetof(knn_neighbor, eval), offsetof(knn_neighbor, index)};
 
     MPI_Type_create_struct(2, blocklengths, offsets, types, &mpi_neighbor_type);
     MPI_Type_commit(&mpi_neighbor_type);
 
-    knn_neighbor *kn = malloc(k * NPREDICTIONS * sizeof *kn);
-    knn_neighbor *npkn = malloc(np * k * NPREDICTIONS * sizeof *npkn);
+    if (pid == 0)
+    {
+        kn = *neighbors = malloc(k * NPREDICTIONS * sizeof *kn);
+        npkn = malloc(np * k * NPREDICTIONS * sizeof *npkn);
+    }
 
     find_npk_neighbors(pid, np, k, ndays, data, chunk_start, chunk_data, chunk_size, mpi_neighbor_type, npkn);
     find_k_neighbors(pid, np, k, npkn, kn);
 
-    if (pid == 0)
-    {
-        for (int i = 0; i < k; ++i)
-            printf("%f ", kn[i].eval);
-        putchar('\n');
-    }
     free(npkn);
 
     MPI_Type_free(&mpi_neighbor_type);
@@ -324,7 +324,7 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
 {
     float *data, *chunk_data;
     int ndays, chunk_start, chunk_size, *chunk_counts, *chunk_displs;
-    knn_neighbor *kn = malloc(k * sizeof *kn);
+    knn_neighbor *neighbors;
 
     if (!load_dataset(pid, filename, &ndays, &data))
         return 0;
@@ -341,7 +341,7 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     if (pid == 0)
         free(chunk_counts), free(chunk_displs);
 
-    if (!find_neighbors(pid, np, k, ndays, data, chunk_start, chunk_size, chunk_data))
+    if (!find_neighbors(pid, np, k, ndays, data, chunk_start, chunk_size, chunk_data, &neighbors))
         return 0;
 
     free(chunk_data);
