@@ -103,5 +103,5 @@ void knn_save_prediction(float *predictions)
     FILE *f = fopen("../out/predictions.txt", "w");
     int hour;
 
-    
+
 }
