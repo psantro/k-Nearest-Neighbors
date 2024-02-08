@@ -401,19 +401,25 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     TRY(broadcast_ndays(pid, &ndays), 0)
     TRY(initialize_chunk_metadata(pid, np, ndays - NPREDICTIONS, &chunk_size, &chunk_data, &chunk_counts, &chunk_displs), 0);
     TRY(scatter_chunks(pid, data, chunk_counts, chunk_displs, chunk_data, chunk_size), 0)
-
     if (pid == 0)
         free(chunk_counts), free(chunk_displs);
 
     TRY(find_neighbors(pid, np, k, ndays, data, chunk_start, chunk_size, chunk_data, &neighbors), 0);
     free(chunk_data);
     TRY(make_predictions(pid, k, ndays, data, neighbors, &predictions, &mape), 0);
-
     if (pid == 0)
         free(data), free(neighbors);
 
-    TRY(save_predictions(pid, "out/predictions.txt", predictions), 0);
-    TRY(save_mape(pid, "out/mape.txt", mape), 0);
+    {
+        TRY(save_predictions(pid, "out/predictions.txt", predictions), 0);
+        if (pid == 0)
+            free(predictions);
+    }
+    {
+        TRY(save_mape(pid, "out/mape.txt", mape), 0);
+        if (pid == 0)
+            free(mape);
+    }
 
     return 1;
 }
