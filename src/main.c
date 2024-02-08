@@ -398,7 +398,8 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     if (pid == 0)
         free(data), free(neighbors);
 
-    // here goes call to save_predictions();
+    if (!save_predictions(pid, "out/predictions.txt", predictions))
+        return 0;
 
     // here goes call to save_mape();
 
