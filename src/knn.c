@@ -98,13 +98,10 @@ void knn_prediction(int k, knn_neighbor const *neighbors, float const *data, flo
     }
 }
 
-static void knn_save_prediction(FILE *f, float *predictions)
+void knn_save_prediction(float *predictions)
 {
-    size_t nhours;
+    FILE *f = fopen("../out/predictions.txt", "w");
+    int hour;
 
-    for (nhours = 0; nhours < NHOURS - 1; nhours++)
-    {
-        fprintf(f, "%f,", predictions[nhours]);
-    }
-    fprintf(f, "%f\n", predictions[nhours]);
+
 }
