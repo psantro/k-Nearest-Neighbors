@@ -130,11 +130,7 @@ int knn_save_mape(char const *filename, float *mape)
     }
 
     for (int nprediction = 0; nprediction < NPREDICTIONS; ++nprediction)
-    {
-        for (int nhour = 0; nhour < NHOURS - 1; ++nhour)
-            printf("%.1f,", mape[nhour + nprediction * NHOURS]);
-        printf("%.1f\n", mape[NHOURS - 1 + nprediction * NHOURS]);
-    }
+        printf("%.1f\n", mape[nprediction]);
 
     fclose(file);
     return 1;
