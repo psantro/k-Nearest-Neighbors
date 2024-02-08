@@ -8,7 +8,8 @@ CFLAGS = -std=c17 -I $(INC) -fopenmp
 INC := inc
 SRC := src
 BIN := bin
-DIRS := $(INC) $(SRC) $(BIN)
+OUT := out
+DIRS := $(INC) $(SRC) $(BIN) $(OUT)
 
 # Files related
 SRCS := $(wildcard $(SRC)/*.c)
