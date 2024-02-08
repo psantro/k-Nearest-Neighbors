@@ -323,7 +323,7 @@ static int find_neighbors(int pid, int np, int k, int ndays, float *data, int ch
     return 1;
 }
 
-static int make_predictions(int pid, int k, int ndays, float *data, float *neighbors, float **predictions, float **mape)
+static int make_predictions(int pid, int k, int ndays, float *data, knn_neighbor *neighbors, float **predictions, float **mape)
 {
     if (pid == 0)
     {
