@@ -223,8 +223,6 @@ static int scatter_chunks(int pid, float const *data, int const *chunk_counts, i
     if (pid == 0)
         printf(DONE_MSG);
 
-    if (pid == 0)
-        free(chunk_counts), free(chunk_displs);
     return 1;
 }
 
@@ -234,24 +232,26 @@ static void remap_chunk_to_global_indexes(int k, knn_neighbor *kn, int offset)
         kn[nk].index += offset;
 }
 
-static int find_npk_neighbors(int pid, int k, int ndays, float *data, int chunk_start, float *chunk_data, int chunk_size, knn_neighbor *allkn)
+static int find_npk_neighbors(int pid, int np, int k, int ndays, float *data, int chunk_start, float *chunk_data, int chunk_size, MPI_Datatype mpi_neighbor_type, knn_neighbor *npkn)
 {
     float target[NHOURS];
     knn_neighbor *kn = malloc(k * sizeof *kn);
 
     if (pid == 0)
-        printf("Predicting next %d days...", NPREDICTIONS);
+        printf("Getting npkn-Nearest Neighbors...");
 
-    for (int nday = ndays - NPREDICTIONS; nday < ndays; ++nday)
+    for (int current = 0; current < NPREDICTIONS; ++current)
     {
-        if (MPI_Scatter(&data[ndays - NPREDICTIONS + nday], NHOURS, MPI_FLOAT, target, NHOURS, MPI_FLOAT, 0, MPI_COMM_WORLD) != MPI_SUCCESS)
+        if (MPI_Scatter(&data[(ndays - NPREDICTIONS + current) * NHOURS], NHOURS, MPI_FLOAT, target, NHOURS, MPI_FLOAT, 0, MPI_COMM_WORLD) != MPI_SUCCESS)
         {
             fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Scatter error.\n", pid);
             return 0;
         }
+
         knn_kNN(k, target, chunk_data, chunk_size, kn);
-        remap_chunk_to_global_indexes(k, kn, chunk_start);
-        if (MPI_Gather(kn, k, MPI_FLOAT, allkn, k, MPI_FLOAT, 0, MPI_COMM_WORLD) != MPI_SUCCESS)
+        remap_chunk_to_global_indexes(np * k, kn, chunk_start);
+
+        if (MPI_Gather(&npkn[current * np * k], k, mpi_neighbor_type, kn, k, mpi_neighbor_type, 0, MPI_COMM_WORLD) != MPI_SUCCESS)
         {
             fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Gather error.\n", pid);
             return 0;
@@ -265,7 +265,18 @@ static int find_npk_neighbors(int pid, int k, int ndays, float *data, int chunk_
     return 1;
 }
 
-static int find_k_neighbors(int pid, int k, int np, int ndays, float *data, int chunk_start, int chunk_size, float *chunk_data)
+static int find_k_neighbors(int pid, int np, int k, knn_neighbor const *npkn, knn_neighbor *kn)
+{
+    if (pid == 0)
+    {
+        printf("Getting k-Nearest Neighbors...");
+        for (int current = 0; current < NPREDICTIONS; ++current)
+            knn_nk_from_npk(k, &npkn[current * np * k], &kn[current * k]);
+        printf(DONE_MSG);
+    }
+}
+
+static int find_neighbors(int pid, int k, int np, int ndays, float *data, int chunk_start, int chunk_size, float *chunk_data)
 {
 
     int blocklengths[] = {1, 1};
@@ -276,11 +287,13 @@ static int find_k_neighbors(int pid, int k, int np, int ndays, float *data, int 
     MPI_Type_create_struct(2, blocklengths, offsets, types, &mpi_neighbor_type);
     MPI_Type_commit(&mpi_neighbor_type);
 
-    knn_neighbor *all_kn = malloc(np * k * sizeof *all_kn);
+    knn_neighbor *kn = malloc(k * NPREDICTIONS * sizeof *kn);
+    knn_neighbor *npkn = malloc(np * k * NPREDICTIONS * sizeof *npkn);
 
-    // here goes code.
+    find_npk_neighbors(pid, np, k, ndays, data, chunk_start, chunk_data, chunk_size, mpi_neighbor_type, npkn);
+    find_k_neighbors(pid, np, k, npkn, kn);
 
-    free(all_kn);
+    free(npkn);
 
     MPI_Type_free(&mpi_neighbor_type);
 
@@ -301,6 +314,7 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
 {
     float *data, *chunk_data;
     int ndays, chunk_start, chunk_size, *chunk_counts, *chunk_displs;
+    knn_neighbor *kn = malloc(k * sizeof *kn);
 
     if (!load_dataset(pid, filename, &ndays, &data))
         return 0;
@@ -313,6 +327,9 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
 
     if (!scatter_chunks(pid, data, chunk_counts, chunk_displs, chunk_data, chunk_size))
         return 0;
+
+    if (pid == 0)
+        free(chunk_counts), free(chunk_displs);
 
     // Step 3. Find Neighbors subgroups.
     free(chunk_data);
