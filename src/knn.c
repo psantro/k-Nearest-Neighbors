@@ -96,9 +96,3 @@ void knn_prediction(int k, knn_neighbor const *neighbors, float const *data, flo
         }
     }
 }
-
-void knn_save_prediction(float *predictions)
-{
-    FILE *f = fopen("../out/predictions.txt", "w");
-    int hour;
-}
