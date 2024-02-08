@@ -48,19 +48,19 @@ static void sink_first(int k, knn_neighbor *nk)
         swap_neighbor(&nk[n], &nk[n + 1]), ++n;
 }
 
-static void find_k(int k, float const *target, float const *data, int size, knn_neighbor *nk)
+static void find_k(int k, float const *target, float const *data, int size, knn_neighbor *kn)
 {
     float dst;
     for (int n = k; n < size; ++n)
     {
         dst = calculate_distance(&data[n * NHOURS], target);
 
-        if (dst < nk[0].eval)
+        if (dst < kn[0].eval)
         {
-            nk[0] = (knn_neighbor){
+            kn[0] = (knn_neighbor){
                 .eval = dst,
                 .index = n};
-            sink_first(k, nk);
+            sink_first(k, kn);
         }
     }
 }
