@@ -80,6 +80,30 @@ static void make_prediction(int k, knn_neighbor const *neighbors, float const *d
     }
 }
 
+static float calculate_MAPE(int h, float *real, float *prediction)
+{
+    float MAPE = 0, dif = 0, error = 0;
+
+    for (int n = 0; n < h; n++)
+    {
+        dif = fabs(real[n] - prediction[n]);
+        error = (100 / h) * fabs(dif / real[n]);
+        MAPE += error;
+    }
+
+    FILE *f = fopen("../datasets/MAPE.txt", "a");
+
+    if (f == NULL)
+    {
+        printf("ERROR");
+        return 1;
+    }
+
+    fprintf(f, "MAPE: %.2f%%\n", MAPE);
+    fclose(f);
+    return MAPE;
+}
+
 void knn_kNN(int k, float const *target, float const *data, int size, knn_neighbor *nk)
 {
     assert(k > 0);
@@ -100,7 +124,6 @@ void knn_predictions(int k, int ndays, knn_neighbor const *neighbors, float cons
 
     for (prediction = 0; prediction < NPREDICTIONS; prediction++)
     {
-        make_prediction(k, neighbors, data, predictions, prediction);        
+        make_prediction(k, neighbors, data, predictions, prediction);
     }
-
 }
