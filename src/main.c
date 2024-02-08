@@ -234,7 +234,6 @@ static int scatter_chunks(int pid, float const *data, int const *chunk_counts, i
 
 static void remap_chunk_to_global_indexes(int k, knn_neighbor *kn, int offset)
 {
-#pragma omp parallel for
     for (int nk = 0; nk < k; ++nk)
         kn[nk].index += offset;
 }

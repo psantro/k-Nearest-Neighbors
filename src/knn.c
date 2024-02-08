@@ -65,21 +65,6 @@ static void find_k(int k, float const *target, float const *data, int size, knn_
     }
 }
 
-static void make_prediction(int k, knn_neighbor const *neighbors, float const *data, float *predictions, int prediction)
-{
-    int hour, neighbor;
-    float mean;
-
-    for (hour = 0; hour < NHOURS; hour++)
-    {
-        mean = 0;
-        for (neighbor = 0; neighbor < k; neighbor++)
-            mean += data[(neighbors[(prediction * k) + neighbor].index * NHOURS) + hour] / k;
-
-        predictions[(prediction * NHOURS) + hour] = mean;
-    }
-}
-
 static float calculate_mape(int ndays, float *data, float *prediction, int data_day, int prediction_day)
 {
     float mape = 0, dif, error;
@@ -107,18 +92,22 @@ void knn_kNN(int k, float const *target, float const *data, int size, knn_neighb
     find_k(k, target, data, size, nk);
 }
 
+static void compute_prediction_and_mape(int k, int ndays, float const *data, int n, knn_neighbor const *neighbors, float *prediction, float *mape)
+{
+    *mape = 0.0;
+    for (int nhour = 0; nhour < NHOURS; ++nhour)
+    {
+        prediction[nhour] = 0.0;
+        for (int neighbor = 0; neighbor < k; ++neighbor)
+            prediction[nhour] += data[nhour + NHOURS * neighbors[neighbor].index] / k;
+
+        *mape += (100.0 / NHOURS) * fabs(data[nhour + (ndays - NPREDICTIONS + n) * NHOURS] - prediction[nhour]) / data[nhour + (ndays - NPREDICTIONS + n) * NHOURS];
+    }
+}
+
 void knn_predictions(int k, int ndays, knn_neighbor const *neighbors, float const *data, float *predictions, float *mape)
 {
-    // Iterators
-    int prediction;
-
-    for (prediction = 0; prediction < NPREDICTIONS; prediction++)
-    {
-        make_prediction(k, neighbors, data, predictions, prediction);
-    }
-
-    for (prediction = 0; prediction < NPREDICTIONS; prediction++)
-    {
-        mape[prediction] = calculate_mape(data, predictions, );
-    }
+#pragma omp parallel for
+    for (int prediction = 0; prediction < NPREDICTIONS; ++prediction)
+        compute_prediction_and_mape(k, ndays, data, prediction, &neighbors[prediction * k], &predictions[prediction * NHOURS], &mape[prediction]);
 }
