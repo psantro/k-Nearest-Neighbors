@@ -349,7 +349,7 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     // here goes more code
 
     if (pid == 0)
-        free(data);
+        free(data), free(neighbors);
     return 1;
 }
 
