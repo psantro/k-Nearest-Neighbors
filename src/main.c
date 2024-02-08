@@ -344,10 +344,29 @@ static int save_predictions(int pid, char const *filename, float *predictions)
     if (pid == 0)
     {
         printf("Saving predictions...");
-        save_ok = knn_save_predictions(filename);
+        save_ok = knn_save_predictions(filename, predictions);
         if (!save_ok)
         {
             fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Saving predictions error.\n", pid);
+            return 0;
+        }
+        printf(DONE_MSG);
+    }
+
+    return 1;
+}
+
+static int save_mape(int pid, char const *filename, float *mape)
+{
+    int save_ok;
+
+    if (pid == 0)
+    {
+        printf("Saving mape...");
+        save_ok = knn_save_mape(filename, mape);
+        if (!save_ok)
+        {
+            fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Saving mape error.\n", pid);
             return 0;
         }
         printf(DONE_MSG);
@@ -401,7 +420,8 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     if (!save_predictions(pid, "out/predictions.txt", predictions))
         return 0;
 
-    // here goes call to save_mape();
+    if (!save_mape(pid, "out/mape.txt", mape))
+        return 0;
 
     return 1;
 }
