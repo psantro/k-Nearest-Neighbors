@@ -271,7 +271,7 @@ static int find_k_neighbors(int pid, int np, int k, knn_neighbor const *npkn, kn
     {
         printf("Getting k-Nearest Neighbors...");
         for (int current = 0; current < NPREDICTIONS; ++current)
-            knn_nk_from_npk(k, &npkn[current * np * k], &kn[current * k]);
+            knn_bubble_sort_array(k, &npkn[current * np * k], 1);
         printf(DONE_MSG);
     }
 }
