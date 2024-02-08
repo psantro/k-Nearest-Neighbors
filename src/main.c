@@ -212,6 +212,12 @@ static int scatter_chunks(int pid, float const *data, int const *chunk_counts, i
     return 1;
 }
 
+static void remap_indexes(int k, knn_neighbor *kn, int offset)
+{
+    for (int nk = 0; nk < k; ++nk)
+        kn->index += offset;
+}
+
 static int find_k_neighbors(float *target)
 {
     return 1;
@@ -281,6 +287,7 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     {
         MPI_Scatter(&data[ndays - NPREDICTIONS + nday], NHOURS, MPI_FLOAT, target, NHOURS, MPI_FLOAT, 0, MPI_COMM_WORLD);
         knn_kNN(k, target, chunk_data, chunk_size, kn);
+        remap_indexes(kn);
         MPI_Gather(kn, k, MPI_FLOAT, all_kn, k, MPI_FLOAT, 0, MPI_COMM_WORLD);
     }
 
