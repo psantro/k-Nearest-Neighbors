@@ -297,7 +297,12 @@ static int find_neighbors(int pid, int np, int k, int ndays, float *data, int ch
     if (pid == 0)
     {
         kn = *neighbors = malloc(k * NPREDICTIONS * sizeof *kn);
+        if (kn == NULL)
+            return 0;
+
         npkn = malloc(np * k * NPREDICTIONS * sizeof *npkn);
+        if (npkn == NULL)
+            return 0;
     }
 
     find_npk_neighbors(pid, np, k, ndays, data, chunk_start, chunk_data, chunk_size, mpi_neighbor_type, npkn);
@@ -306,6 +311,28 @@ static int find_neighbors(int pid, int np, int k, int ndays, float *data, int ch
     free(npkn);
 
     MPI_Type_free(&mpi_neighbor_type);
+
+    return 1;
+}
+
+static int make_predictions(int pid, int k, int ndays, float *data, float *neighbors, float **predictions, float **mape)
+{
+    if (pid == 0)
+    {
+        printf("Make predictions...");
+
+        *predictions = malloc(NPREDICTIONS * NHOURS * sizeof *predictions);
+        if (*predictions == NULL)
+            return 0;
+
+        *mape = malloc(NPREDICTIONS * sizeof *mape);
+        if (*mape == NULL)
+            return 0;
+
+        knn_predictions(k, ndays, neighbors, data, *predictions, *mape);
+
+        printf(DONE_MSG);
+    }
 
     return 1;
 }
@@ -322,7 +349,7 @@ static int find_neighbors(int pid, int np, int k, int ndays, float *data, int ch
  */
 static int exec(char const *filename, int k, int np, int nt, int pid)
 {
-    float *data, *chunk_data;
+    float *data, *chunk_data, *predictions, *mape;
     int ndays, chunk_start, chunk_size, *chunk_counts, *chunk_displs;
     knn_neighbor *neighbors;
 
@@ -346,10 +373,14 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
 
     free(chunk_data);
 
-    // here goes more code
+    if (!make_predictions(pid, k, ndays, data, neighbors, &predictions, &mape))
+        return 0;
 
     if (pid == 0)
         free(data), free(neighbors);
+
+    // here goes call to save_dataset();
+
     return 1;
 }
 
