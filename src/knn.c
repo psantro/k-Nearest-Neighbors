@@ -28,7 +28,7 @@ static void swap_neighbor(knn_neighbor *a, knn_neighbor *b)
     tmp = *a, *a = *b, *b = tmp;
 }
 
-static void bubble_sort_array(int k, knn_neighbor *nk)
+void knn_bubble_sort_array(int k, knn_neighbor *nk, int asc)
 {
     int nswaps;
 
@@ -36,7 +36,7 @@ static void bubble_sort_array(int k, knn_neighbor *nk)
     {
         nswaps = 0;
         for (int n = 0; n < k - 1; ++n)
-            if (nk[n].eval < nk[n + 1].eval)
+            if (!(nk[n].eval <= nk[n + 1].eval) && asc)
                 swap_neighbor(&nk[n], &nk[n + 1]), ++nswaps;
     } while (nswaps != 0);
 }
@@ -93,7 +93,7 @@ void knn_prediction(int k, knn_neighbor const *neighbors, float const *data, flo
             {
                 sum += data[(neighbors[(prediction * k) + neighbor].index * NHOURS) + hour];
             }
-            predictions[(prediction * NHOURS) + hour] = sum / k;
+            predictions[(prediction * NHOURS) + hour];
         }
     }
 }
