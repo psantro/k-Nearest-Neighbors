@@ -9,6 +9,12 @@
 #define FAILED_MSG "\e[1;31mfailed\e[22;39m\n"
 #define ERROR_MSG "\e[1;31mError\e[22;39m: "
 
+#define TRY(EX, CODE)    \
+    {                    \
+        if (!EX)         \
+            return CODE; \
+    }
+
 /**
  * @brief Sorted (easy to access) k-NN arguments.
  */
@@ -391,37 +397,23 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     int ndays, chunk_start, chunk_size, *chunk_counts, *chunk_displs;
     knn_neighbor *neighbors;
 
-    if (!load_dataset(pid, filename, &ndays, &data))
-        return 0;
-
-    if (!broadcast_ndays(pid, &ndays))
-        return 0;
-
-    if (!initialize_chunk_metadata(pid, np, ndays - NPREDICTIONS, &chunk_size, &chunk_data, &chunk_counts, &chunk_displs))
-        return 0;
-
-    if (!scatter_chunks(pid, data, chunk_counts, chunk_displs, chunk_data, chunk_size))
-        return 0;
+    TRY(load_dataset(pid, filename, &ndays, &data), 0);
+    TRY(broadcast_ndays(pid, &ndays), 0)
+    TRY(initialize_chunk_metadata(pid, np, ndays - NPREDICTIONS, &chunk_size, &chunk_data, &chunk_counts, &chunk_displs), 0);
+    TRY(scatter_chunks(pid, data, chunk_counts, chunk_displs, chunk_data, chunk_size), 0)
 
     if (pid == 0)
         free(chunk_counts), free(chunk_displs);
 
-    if (!find_neighbors(pid, np, k, ndays, data, chunk_start, chunk_size, chunk_data, &neighbors))
-        return 0;
-
+    TRY(find_neighbors(pid, np, k, ndays, data, chunk_start, chunk_size, chunk_data, &neighbors), 0);
     free(chunk_data);
-
-    if (!make_predictions(pid, k, ndays, data, neighbors, &predictions, &mape))
-        return 0;
+    TRY(make_predictions(pid, k, ndays, data, neighbors, &predictions, &mape), 0);
 
     if (pid == 0)
         free(data), free(neighbors);
 
-    if (!save_predictions(pid, "out/predictions.txt", predictions))
-        return 0;
-
-    if (!save_mape(pid, "out/mape.txt", mape))
-        return 0;
+    TRY(save_predictions(pid, "out/predictions.txt", predictions), 0);
+    TRY(save_mape(pid, "out/mape.txt", mape), 0);
 
     return 1;
 }
