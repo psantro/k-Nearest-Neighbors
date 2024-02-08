@@ -80,6 +80,20 @@ static void make_prediction(int k, knn_neighbor const *neighbors, float const *d
     }
 }
 
+static float calculate_mape(float *real, float *prediction)
+{
+    float mape = 0, dif, error;
+
+    for (int hour = 0; hour < NHOURS; hour++)
+    {
+        dif = fabs(real[hour] - prediction[hour]);
+        error = (100 / NHOURS) * fabs(dif / real[hour]);
+        mape += error;
+    }
+
+    return mape;
+}
+
 void knn_kNN(int k, float const *target, float const *data, int size, knn_neighbor *nk)
 {
     assert(k > 0);
@@ -100,7 +114,11 @@ void knn_predictions(int k, int ndays, knn_neighbor const *neighbors, float cons
 
     for (prediction = 0; prediction < NPREDICTIONS; prediction++)
     {
-        make_prediction(k, neighbors, data, predictions, prediction);        
+        make_prediction(k, neighbors, data, predictions, prediction);
     }
 
+    for (prediction = 0; prediction < NPREDICTIONS; prediction++)
+    {
+        //mape[prediction] = calculate_mape(data[0], predictions[0]);
+    }
 }
