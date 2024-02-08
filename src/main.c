@@ -212,7 +212,7 @@ static int scatter_chunks(int pid, float const *data, int const *chunk_counts, i
     return 1;
 }
 
-static void remap_indexes(int k, knn_neighbor *kn, int offset)
+static void remap_chunk_to_global_indexes(int k, knn_neighbor *kn, int offset)
 {
     for (int nk = 0; nk < k; ++nk)
         kn->index += offset;
