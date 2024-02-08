@@ -115,6 +115,20 @@ static void calculate_chunk_size(int total, int np, int *master_size, int *slave
 }
 
 /**
+ * @brief Calculates the starting index of a chunk of a process
+ *
+ * @param       pid             Process id.
+ * @param       np              Number of processes.
+ * @param       master_size     Master chunk size.
+ * @param       slaves_size     Slave chunk size.
+ * @param[out]  chunk_start     Chunk start.
+ */
+static void calculate_chunk_start(int pid, int np, int master_size, int slaves_size, int *chunk_start)
+{
+    *chunk_start = (pid == 0) ? 0 : master_size + (pid - 1) * slaves_size;
+}
+
+/**
  * @brief Initialize necessary chunk metadata.
  *
  * @param       pid                 Process id.
@@ -209,6 +223,8 @@ static int scatter_chunks(int pid, float const *data, int const *chunk_counts, i
     if (pid == 0)
         printf(DONE_MSG);
 
+    if (pid == 0)
+        free(chunk_counts), free(chunk_displs);
     return 1;
 }
 
@@ -218,29 +234,57 @@ static void remap_chunk_to_global_indexes(int k, knn_neighbor *kn, int offset)
         kn[nk].index += offset;
 }
 
-static int find_k_neighbors(float *target)
+static int find_npk_neighbors(int pid, int k, int ndays, float *data, int chunk_start, float *chunk_data, int chunk_size, knn_neighbor *allkn)
 {
+    float target[NHOURS];
+    knn_neighbor *kn = malloc(k * sizeof *kn);
+
+    if (pid == 0)
+        printf("Predicting next %d days...", NPREDICTIONS);
+
+    for (int nday = ndays - NPREDICTIONS; nday < ndays; ++nday)
+    {
+        if (MPI_Scatter(&data[ndays - NPREDICTIONS + nday], NHOURS, MPI_FLOAT, target, NHOURS, MPI_FLOAT, 0, MPI_COMM_WORLD) != MPI_SUCCESS)
+        {
+            fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Scatter error.\n", pid);
+            return 0;
+        }
+        knn_kNN(k, target, chunk_data, chunk_size, kn);
+        remap_chunk_to_global_indexes(k, kn, chunk_start);
+        if (MPI_Gather(kn, k, MPI_FLOAT, allkn, k, MPI_FLOAT, 0, MPI_COMM_WORLD) != MPI_SUCCESS)
+        {
+            fprintf(stderr, FAILED_MSG "%d:" ERROR_MSG "Gather error.\n", pid);
+            return 0;
+        }
+    }
+
+    if (pid == 0)
+        printf(DONE_MSG);
+
+    free(kn);
     return 1;
 }
 
-/**
- * @brief Clean everything.
- *
- * @param           pid             Process id.
- * @param[inout]    chunk_data      Chunk data.
- * @param[inout]    chunk_counts    Chunk counts.
- * @param[inout]    chunk_displs    Chunk displacements.
- * @param[inout]    data            Dataset data.
- */
-static void cleanup(int pid, float *chunk_data, int *chunk_counts, int *chunk_displs, float *data)
+static int find_k_neighbors(int pid, int k, int np, int ndays, float *data, int chunk_start, int chunk_size, float *chunk_data)
 {
-    free(chunk_data);
-    if (pid == 0)
-    {
-        free(chunk_counts);
-        free(chunk_displs);
-        free(data);
-    }
+
+    int blocklengths[] = {1, 1};
+    MPI_Datatype types[] = {MPI_FLOAT, MPI_INTEGER};
+    MPI_Datatype mpi_neighbor_type;
+    MPI_Aint offsets[] = {offsetof(knn_neighbor, eval), offsetof(knn_neighbor, index)};
+
+    MPI_Type_create_struct(2, blocklengths, offsets, types, &mpi_neighbor_type);
+    MPI_Type_commit(&mpi_neighbor_type);
+
+    knn_neighbor *all_kn = malloc(np * k * sizeof *all_kn);
+
+    // here goes code.
+
+    free(all_kn);
+
+    MPI_Type_free(&mpi_neighbor_type);
+
+    return 1;
 }
 
 /**
@@ -255,8 +299,8 @@ static void cleanup(int pid, float *chunk_data, int *chunk_counts, int *chunk_di
  */
 static int exec(char const *filename, int k, int np, int nt, int pid)
 {
-    float *data, *chunk_data, target[NHOURS];
-    int nday, ndays, chunk_size, *chunk_counts, *chunk_displs;
+    float *data, *chunk_data;
+    int ndays, chunk_start, chunk_size, *chunk_counts, *chunk_displs;
 
     if (!load_dataset(pid, filename, &ndays, &data))
         return 0;
@@ -270,34 +314,13 @@ static int exec(char const *filename, int k, int np, int nt, int pid)
     if (!scatter_chunks(pid, data, chunk_counts, chunk_displs, chunk_data, chunk_size))
         return 0;
 
-    // Create type
-    int blocklengths[] = {1, 1};
-    MPI_Datatype types[] = {MPI_FLOAT, MPI_INTEGER};
-    MPI_Datatype mpi_neighbor_type;
-    MPI_Aint offsets[] = {offsetof(knn_neighbor, eval), offsetof(knn_neighbor, index)};
-
-    MPI_Type_create_struct(2, blocklengths, offsets, types, &mpi_neighbor_type);
-    MPI_Type_commit(&mpi_neighbor_type);
-
     // Step 3. Find Neighbors subgroups.
-    knn_neighbor *kn = malloc(k * sizeof *kn);
-    knn_neighbor *all_kn = malloc(np * k * sizeof *all_kn);
+    free(chunk_data);
 
-    for (nday = ndays - NPREDICTIONS; nday < ndays; ++nday)
-    {
-        MPI_Scatter(&data[ndays - NPREDICTIONS + nday], NHOURS, MPI_FLOAT, target, NHOURS, MPI_FLOAT, 0, MPI_COMM_WORLD);
-        knn_kNN(k, target, chunk_data, chunk_size, kn);
-        remap_indexes(kn);
-        MPI_Gather(kn, k, MPI_FLOAT, all_kn, k, MPI_FLOAT, 0, MPI_COMM_WORLD);
-    }
+    // here goes more code
 
-    free(kn);
-    free(all_kn);
-
-    MPI_Type_free(&mpi_neighbor_type);
-
-    // Cleanup
-    cleanup(pid, chunk_data, chunk_counts, chunk_displs, data);
+    if (pid == 0)
+        free(data);
     return 1;
 }
 
