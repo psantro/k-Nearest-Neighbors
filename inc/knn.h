@@ -33,4 +33,6 @@ void knn_kNN(int k, float const *target, float const *data, int size, knn_neighb
  */
 void knn_bubble_sort_array(int k, knn_neighbor *nk, int asc);
 
+void knn_predictions(int k, int ndays, knn_neighbor const *neighbors, float const *data, float *predictions, float *mape);
+
 #endif
