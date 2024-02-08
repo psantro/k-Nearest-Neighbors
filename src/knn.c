@@ -44,7 +44,7 @@ static void bubble_sort_array(int k, knn_neighbor *nk)
 static void sink_first(int k, knn_neighbor *nk)
 {
     int n = 0;
-    while (nk[n].eval < nk[n + 1].eval && n < k)
+    while (nk[n].eval < nk[n + 1].eval && n < k - 1)
         swap_neighbor(&nk[n], &nk[n + 1]), ++n;
 }
 
