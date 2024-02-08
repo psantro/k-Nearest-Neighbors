@@ -234,6 +234,7 @@ static int scatter_chunks(int pid, float const *data, int const *chunk_counts, i
 
 static void remap_chunk_to_global_indexes(int k, knn_neighbor *kn, int offset)
 {
+#pragma omp parallel for
     for (int nk = 0; nk < k; ++nk)
         kn[nk].index += offset;
 }
@@ -276,6 +277,7 @@ static int find_k_neighbors(int pid, int np, int k, knn_neighbor *npkn, knn_neig
     if (pid == 0)
     {
         printf("Getting k-Nearest Neighbors...");
+#pragma omp parallel for
         for (int current = 0; current < NPREDICTIONS; ++current)
         {
             knn_bubble_sort_array(k, &npkn[current * np * k], 1);
